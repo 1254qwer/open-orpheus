@@ -13,11 +13,6 @@ async function getSCFonts(): Promise<string[]> {
   return await ipcRenderer.invoke("fonts.getSCFonts");
 }
 
-if (isMain) {
-  // Lyrics is only used in main window
-  import("./preload/lyrics");
-}
-
 contextBridge.executeInMainWorld({
   func: (isMain: boolean, getFonts: typeof getSCFonts) => {
     const originalContentDocumentDescriptor = Object.getOwnPropertyDescriptor(

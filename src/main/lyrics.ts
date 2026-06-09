@@ -1,22 +1,16 @@
-import { events as lifecycleEvents } from "./lifecycle";
 import LyricsDispatcher from "./lyrics/LyricsDispatcher";
+import { playbackController } from "./mediaSession";
 
 export const lyricsDispatcher = new LyricsDispatcher();
 
 // Lyrics update events are handled in calls.
 
-lifecycleEvents.on("mainwindowcreated", (e) => {
-  const mainWindow = e.data;
-
-  mainWindow.webContents.ipc.on("lyrics.setPlayState", (event, playState) => {
-    lyricsDispatcher.playState = playState;
-  });
-
-  mainWindow.webContents.ipc.on("lyrics.setTime", (event, time) => {
-    lyricsDispatcher.time = time;
-  });
-
-  mainWindow.webContents.ipc.on("lyrics.setPlaybackRate", (event, rate) => {
-    lyricsDispatcher.playbackRate = rate;
-  });
+playbackController.on("timeupdate", ({ data }) => {
+  lyricsDispatcher.time = data;
+});
+playbackController.on("playbackratechange", ({ data }) => {
+  lyricsDispatcher.playbackRate = data;
+});
+playbackController.on("advancingchange", ({ data }) => {
+  lyricsDispatcher.playState = data;
 });

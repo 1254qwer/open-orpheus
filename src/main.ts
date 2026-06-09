@@ -94,6 +94,7 @@ app.setPath("userData", userdataDir);
 // see https://github.com/electron/electron/blob/c2a0ec9931096ec83441521c8a75449cae96cd85/shell/renderer/api/electron_api_context_bridge.cc#L37
 // see https://github.com/YUCLing/open-orpheus/pull/105#issue-4520228513
 app.commandLine.appendSwitch("enable-features", "ContextBridgeMutability");
+app.commandLine.appendSwitch("disable-features", "MediaSessionService");
 
 if (existsSync(disableHardwareAccelerationFlag)) {
   app.disableHardwareAcceleration();
@@ -242,6 +243,7 @@ app.on("ready", async () => {
       })(),
       import("./main/afp"),
       import("./main/fonts"),
+      import("./main/mediaSession").then((m) => m.createMediaSession()),
       import("./main/channel"),
       import("./main/request").then(async (m) => {
         m.setupRequestInterceptors();

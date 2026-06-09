@@ -37,6 +37,7 @@ import {
   updateMute,
 } from "../windows/mini-player";
 import { setFont } from "../gui";
+import { mediaSession } from "../mediaSession";
 
 let listItems: ListElement[] = [];
 let currentPlay: string | null = null;
@@ -52,6 +53,17 @@ export type PlayInfo = {
 };
 
 registerCallHandler<[PlayInfo], void>("player.setInfo", (_event, playInfo) => {
+  mediaSession.setMetadata(
+    playInfo.playId
+      ? {
+          id: playInfo.playId,
+          title: playInfo.songName,
+          artist: playInfo.artistName,
+          album: playInfo.albumName,
+          url: playInfo.url,
+        }
+      : null
+  );
   updatePlayInfo(playInfo);
   updateLyricsPlayInfo(playInfo);
 });

@@ -35,7 +35,7 @@ export function registerLyricsHandlers(wnd: Electron.BrowserWindow) {
     wnd.webContents.send("lyrics.timeUpdate", e.data);
   });
   const unlistenPlaybackRateUpdate = lyricsDispatcher.on(
-    "playbackrateupdate",
+    "playbackratechange",
     (e) => {
       wnd.webContents.send("lyrics.playbackRateUpdate", e.data);
     }

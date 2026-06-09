@@ -1,0 +1,83 @@
+import os from "node:os";
+
+import { events as lifecycleEvents } from "./lifecycle";
+import PlaybackController from "./playback/PlaybackController";
+import { PlaybackChange } from "./playback/types";
+import {
+  MediaSessionAdapter,
+  NoopAdapter,
+} from "./playback/adapters/MediaSessionAdapter";
+import MprisAdapter from "./playback/adapters/MprisAdapter";
+import PlayerCommandRouter from "./playback/PlayerCommandRouter";
+
+/** Track metadata passed through the frozen `player.setInfo` seam. */
+export interface Metadata {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  url: string;
+}
+
+/** Single source of truth for playback state (see playback/PlaybackController). */
+export const playbackController = new PlaybackController();
+
+let adapter: MediaSessionAdapter = new NoopAdapter();
+
+export async function createMediaSession(): Promise<void> {
+  switch (os.platform()) {
+    case "linux":
+      adapter = new MprisAdapter();
+      break;
+    default:
+      console.warn("Media session is not available on this platform.");
+  }
+
+  // OS media-session commands → renderer.
+  new PlayerCommandRouter(adapter);
+
+  // Derived state → OS media-session adapter.
+  playbackController.on("trackchanged", ({ data }) => adapter.onTrack(data));
+  playbackController.on("statuschanged", ({ data }) => adapter.onStatus(data));
+  playbackController.on("positionchanged", ({ data }) =>
+    adapter.onPosition(data.position, data.seeked)
+  );
+  playbackController.on("durationchanged", ({ data }) =>
+    adapter.onDuration(data)
+  );
+  playbackController.on("ratechanged", ({ data }) => adapter.onRate(data));
+  playbackController.on("volumechanged", ({ data }) => adapter.onVolume(data));
+}
+
+// Frozen seam: `player.setInfo` (registerCallHandler) calls this.
+export const mediaSession = {
+  setMetadata(metadata: Metadata | null): void {
+    playbackController.setTrack(metadata);
+  },
+};
+
+lifecycleEvents.on("mainwindowcreated", ({ data: mainWindow }) => {
+  mainWindow.webContents.ipc.on("player.timeupdate", (e, time) => {
+    playbackController.applyPosition(time);
+  });
+
+  mainWindow.webContents.ipc.on("player.seeked", (e, time) => {
+    playbackController.applyPosition(time, true);
+  });
+
+  mainWindow.webContents.ipc.on("player.durationchange", (e, duration) => {
+    playbackController.applyDuration(duration);
+  });
+
+  mainWindow.webContents.ipc.on("player.playbackratechange", (e, rate) => {
+    playbackController.applyRate(rate);
+  });
+
+  mainWindow.webContents.ipc.on("player.playbackchange", (e, change) => {
+    playbackController.applyPlaybackChange(change as PlaybackChange);
+  });
+
+  mainWindow.webContents.ipc.on("player.volumechange", (e, volume) => {
+    playbackController.applyVolume(volume);
+  });
+});
