@@ -10,15 +10,22 @@ const KV_ENTRIES: Record<string, unknown> = {
 
 import Emittery from "emittery";
 import { Keyv, KeyvHooks } from "keyv";
+import { KeyvSqlite } from "@keyv/sqlite";
 
 import { SettingsEvents } from "$sharedTypes/settings";
-import { nativeDbKvDriver } from "./database";
+import createKeyvSqliteDriver from "./database/KeyvSqliteDriver";
+import { nativeDb } from "./database";
 
 export let kv: Keyv;
 export let events: Emittery<SettingsEvents>;
 
 export function initialize() {
-  kv = new Keyv({ namespace: "settings", store: nativeDbKvDriver });
+  kv = new Keyv({
+    namespace: "settings",
+    store: new KeyvSqlite({
+      driver: createKeyvSqliteDriver(nativeDb),
+    }),
+  });
 
   const get = kv.get.bind(kv);
   kv.get = async (keyOrKeys) => {

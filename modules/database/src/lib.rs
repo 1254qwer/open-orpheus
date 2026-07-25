@@ -1,28 +1,49 @@
 #![deny(clippy::all)]
 
-use std::{cmp::Ordering, time::Instant};
+use std::{
+    cmp::Ordering,
+    collections::HashMap,
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
 use napi::{
     bindgen_prelude::{Array, Object, ToNapiValue},
-    Env, Error, Result, Unknown,
+    Env, Error, JsValue, Result, Unknown,
 };
 use napi_derive::napi;
 use rusqlite::{fallible_iterator::FallibleIterator, types::Value, Batch, Connection};
+use threadpool::ThreadPool;
 
-use crate::values::{js_to_rusqlite_value, value_ref_to_js_string};
+use crate::values::{js_to_rusqlite_value, value_to_js_string, value_to_js_value};
 
 mod collation;
 mod values;
 
+/// Unwrap a `Result<T, napi::Error>`, or reject the deferred promise and return.
+macro_rules! try_or_reject {
+    ($expr:expr, $deferred:ident) => {
+        match $expr {
+            Ok(val) => val,
+            Err(err) => {
+                $deferred.reject(err);
+                return;
+            }
+        }
+    };
+}
+
 #[napi]
 pub struct Database {
-    conn: Connection,
+    pool: ThreadPool,
+    conn: Arc<Mutex<Connection>>,
 }
 
 #[napi]
 impl Database {
     #[napi(constructor)]
     pub fn new(path: String) -> Result<Self> {
+        let pool = ThreadPool::new(1); // We are locking all along, so simply single threaded pool
         let conn = Connection::open(path).map_err(|err| Error::from_reason(err.to_string()))?;
 
         // Register custom collations so SQL referencing COLLATE pinyin_desc / pinyin_asc works.
@@ -31,17 +52,22 @@ impl Database {
         });
         let _ = conn.create_collation("pinyin_asc", collation::compare_pinyin);
 
-        Ok(Self { conn })
+        Ok(Self {
+            pool,
+            conn: Arc::new(Mutex::new(conn)),
+        })
     }
 
     /// Execute a single SQL statement with named parameters.
-    #[napi(ts_return_type = "[number, Record<string, string>[]]")]
+    #[napi(ts_return_type = "Promise<[number, Record<string, unknown>[]]>")]
     pub fn exec_named<'env>(
         &self,
         env: &'env Env,
         sql: String,
         #[napi(ts_arg_type = "Record<string, unknown>")] parameters: Object,
-    ) -> Result<Array<'env>> {
+    ) -> Result<Object<'env>> {
+        let (deferred, object) = env.create_deferred()?;
+        let conn = self.conn.clone();
         let keys = Object::keys(&parameters)?;
         let mut param_values: Vec<(String, Value)> = Vec::with_capacity(keys.len());
 
@@ -57,64 +83,99 @@ impl Database {
             let rusqlite_val = js_to_rusqlite_value(val)?;
             param_values.push((key, rusqlite_val));
         }
+        self.pool.execute(move || {
+            let param_refs: Vec<(&str, &dyn rusqlite::types::ToSql)> = param_values
+                .iter()
+                .map(|(k, v)| (k.as_str(), v as &dyn rusqlite::types::ToSql))
+                .collect();
 
-        let param_refs: Vec<(&str, &dyn rusqlite::types::ToSql)> = param_values
-            .iter()
-            .map(|(k, v)| (k.as_str(), v as &dyn rusqlite::types::ToSql))
-            .collect();
+            let conn = try_or_reject!(
+                conn.lock().map_err(|e| Error::from_reason(e.to_string())),
+                deferred
+            );
 
-        let mut stmt = self
-            .conn
-            .prepare(&sql)
-            .map_err(|err| Error::from_reason(err.to_string()))?;
+            let mut stmt = try_or_reject!(
+                conn.prepare(&sql)
+                    .map_err(|e| Error::from_reason(e.to_string())),
+                deferred
+            );
 
-        let column_count = stmt.column_count();
-        let mut column_names = Vec::with_capacity(column_count);
-        for i in 0..column_count {
-            let name = stmt.column_name(i).map_err(|err| {
-                Error::from_reason(format!("Failed to get column name for index{}: {}", i, err))
-            })?;
-            column_names.push(name.to_string());
-        }
-
-        let prev_changes = self.conn.total_changes();
-
-        let mut rows = stmt.query(&param_refs[..]).map_err(|err| {
-            Error::from_reason(format!("Failed to execute SQL: {} - {}", err, sql))
-        })?;
-
-        let mut results = Vec::new();
-        while let Ok(Some(row)) = rows.next() {
-            let mut row_obj = Object::new(env)?;
-            for (i, col_name) in column_names.iter().enumerate() {
-                let val = row.get_ref(i).unwrap();
-                row_obj.set(col_name, value_ref_to_js_string(env, val))?;
+            let column_count = stmt.column_count();
+            let mut column_names = Vec::with_capacity(column_count);
+            for i in 0..column_count {
+                let name = try_or_reject!(
+                    stmt.column_name(i).map_err(|err| {
+                        Error::from_reason(format!(
+                            "Failed to get column name for index{}: {}",
+                            i, err
+                        ))
+                    }),
+                    deferred
+                );
+                column_names.push(name.to_string());
             }
-            results.push(row_obj);
-        }
 
-        let row_affected = self.conn.total_changes() - prev_changes;
+            let prev_changes = conn.total_changes();
 
-        let mut result = env.create_array(2)?;
-        result.set(0, row_affected as f64)?;
+            let mut rows = try_or_reject!(
+                stmt.query(&param_refs[..])
+                    .map_err(|err| Error::from_reason(format!(
+                        "Failed to execute SQL: {} - {}",
+                        err, sql
+                    ))),
+                deferred
+            );
 
-        let mut result_rows = env.create_array(results.len() as u32)?;
-        for (i, row) in results.into_iter().enumerate() {
-            result_rows.set(i as u32, row).unwrap();
-        }
-        result.set(1, result_rows).unwrap();
+            let mut results = Vec::new();
+            loop {
+                let row = try_or_reject!(
+                    rows.next().map_err(|e| Error::from_reason(e.to_string())),
+                    deferred
+                );
+                match row {
+                    Some(row) => {
+                        let mut row_obj = HashMap::new();
+                        for (i, col_name) in column_names.iter().enumerate() {
+                            let val = row.get(i).unwrap();
+                            row_obj.insert(col_name.clone(), val);
+                        }
+                        results.push(row_obj);
+                    }
+                    None => break,
+                }
+            }
 
-        Ok(result)
+            let row_affected = conn.total_changes() - prev_changes;
+
+            deferred.resolve(move |env| {
+                let mut result = env.create_array(2)?;
+                result.set(0, row_affected as f64)?;
+
+                let mut result_rows = env.create_array(results.len() as u32)?;
+                for (i, row) in results.into_iter().enumerate() {
+                    let mut row_obj = Object::new(&env)?;
+                    for (col_name, val) in row.iter() {
+                        row_obj.set(col_name, value_to_js_value(&env, val))?;
+                    }
+                    result_rows.set(i as u32, row_obj).unwrap();
+                }
+                result.set(1, result_rows).unwrap();
+
+                Ok(result.raw())
+            });
+        });
+        Ok(object)
     }
 
     /// Execute a single SQL statement with positional (`?`) parameters.
-    #[napi(ts_return_type = "[number, Record<string, string>[]]")]
+    #[napi(ts_return_type = "Promise<[number, Record<string, unknown>[]]>")]
     pub fn exec<'env>(
         &self,
         env: &'env Env,
         sql: String,
         parameters: Array,
-    ) -> Result<Array<'env>> {
+    ) -> Result<Object<'env>> {
+        let (deferred, object) = env.create_deferred()?;
         let mut param_values: Vec<Value> = Vec::with_capacity(parameters.len() as usize);
 
         for i in 0..parameters.len() {
@@ -122,60 +183,95 @@ impl Database {
             param_values.push(js_to_rusqlite_value(param)?);
         }
 
-        let param_refs: Vec<&dyn rusqlite::types::ToSql> = param_values
-            .iter()
-            .map(|v| v as &dyn rusqlite::types::ToSql)
-            .collect();
+        let conn = self.conn.clone();
+        self.pool.execute(move || {
+            let param_refs: Vec<&dyn rusqlite::types::ToSql> = param_values
+                .iter()
+                .map(|v| v as &dyn rusqlite::types::ToSql)
+                .collect();
 
-        let mut stmt = self
-            .conn
-            .prepare(&sql)
-            .map_err(|err| Error::from_reason(err.to_string()))?;
+            let conn = try_or_reject!(
+                conn.lock().map_err(|e| Error::from_reason(e.to_string())),
+                deferred
+            );
 
-        let column_count = stmt.column_count();
-        let mut column_names = Vec::with_capacity(column_count);
-        for i in 0..column_count {
-            let name = stmt.column_name(i).map_err(|err| {
-                Error::from_reason(format!("Failed to get column name for index{}: {}", i, err))
-            })?;
-            column_names.push(name.to_string());
-        }
+            let mut stmt = try_or_reject!(
+                conn.prepare(&sql)
+                    .map_err(|e| Error::from_reason(e.to_string())),
+                deferred
+            );
 
-        let prev_changes = self.conn.total_changes();
-
-        let mut rows = stmt.query(&param_refs[..]).map_err(|err| {
-            Error::from_reason(format!("Failed to execute SQL: {} - {}", err, sql))
-        })?;
-
-        let mut results = Vec::new();
-        while let Ok(Some(row)) = rows.next() {
-            let mut row_obj = Object::new(env)?;
-            for (i, col_name) in column_names.iter().enumerate() {
-                let val = row.get_ref(i).unwrap();
-                row_obj.set(col_name, value_ref_to_js_string(env, val))?;
+            let column_count = stmt.column_count();
+            let mut column_names = Vec::with_capacity(column_count);
+            for i in 0..column_count {
+                let name = try_or_reject!(
+                    stmt.column_name(i).map_err(|err| {
+                        Error::from_reason(format!(
+                            "Failed to get column name for index{}: {}",
+                            i, err
+                        ))
+                    }),
+                    deferred
+                );
+                column_names.push(name.to_string());
             }
-            results.push(row_obj);
-        }
 
-        let row_affected = self.conn.total_changes() - prev_changes;
+            let prev_changes = conn.total_changes();
 
-        let mut result = env.create_array(3)?;
-        result.set(0, row_affected as f64)?;
+            let mut rows = try_or_reject!(
+                stmt.query(&param_refs[..])
+                    .map_err(|err| Error::from_reason(format!(
+                        "Failed to execute SQL: {} - {}",
+                        err, sql
+                    ))),
+                deferred
+            );
 
-        let mut result_rows = env.create_array(results.len() as u32)?;
-        for (i, row) in results.into_iter().enumerate() {
-            result_rows.set(i as u32, row).unwrap();
-        }
-        result.set(1, result_rows).unwrap();
+            let mut results = Vec::new();
+            loop {
+                let row = try_or_reject!(
+                    rows.next().map_err(|e| Error::from_reason(e.to_string())),
+                    deferred
+                );
+                match row {
+                    Some(row) => {
+                        let mut row_obj = HashMap::new();
+                        for (i, col_name) in column_names.iter().enumerate() {
+                            let val = row.get(i).unwrap();
+                            row_obj.insert(col_name.clone(), val);
+                        }
+                        results.push(row_obj);
+                    }
+                    None => break,
+                }
+            }
 
-        Ok(result)
+            let row_affected = conn.total_changes() - prev_changes;
+
+            deferred.resolve(move |env| {
+                let mut result = env.create_array(2)?;
+                result.set(0, row_affected as f64)?;
+
+                let mut result_rows = env.create_array(results.len() as u32)?;
+                for (i, row) in results.into_iter().enumerate() {
+                    let mut row_obj = Object::new(&env)?;
+                    for (col_name, val) in row.iter() {
+                        row_obj.set(col_name, value_to_js_value(&env, val))?;
+                    }
+                    result_rows.set(i as u32, row_obj).unwrap();
+                }
+                result.set(1, result_rows).unwrap();
+
+                Ok(result.raw())
+            });
+        });
+        Ok(object)
     }
 
-    fn execute_sql_impl<'env>(
-        env: &'env Env,
+    fn execute_sql_impl(
         conn: &Connection,
         sql: String,
-    ) -> Result<Array<'env>> {
+    ) -> Result<impl FnOnce(Env) -> Result<napi::sys::napi_value>> {
         let t0 = Instant::now();
 
         let mut batch = Batch::new(conn, &sql);
@@ -184,25 +280,44 @@ impl Database {
 
         let t1 = Instant::now();
 
-        while let Ok(Some(mut stmt)) = batch.next() {
-            let column_count = stmt.column_count();
-            let mut column_names = Vec::with_capacity(column_count);
-            for i in 0..column_count {
-                let name = stmt.column_name(i).map_err(|err| {
-                    Error::from_reason(format!("Failed to get column name for index{}: {}", i, err))
-                })?;
-                column_names.push(name.to_string());
-            }
-            let mut rows = stmt.query([]).map_err(|err| {
-                Error::from_reason(format!("Failed to execute SQL: {} - {}", err, sql))
-            })?;
-            while let Ok(Some(row)) = rows.next() {
-                let mut row_obj = Object::new(env)?;
-                for (i, col_name) in column_names.iter().enumerate() {
-                    let val = row.get_ref(i).unwrap();
-                    row_obj.set(col_name, value_ref_to_js_string(env, val))?;
+        loop {
+            match batch.next() {
+                Ok(Some(mut stmt)) => {
+                    let column_count = stmt.column_count();
+                    let mut column_names = Vec::with_capacity(column_count);
+                    for i in 0..column_count {
+                        let name = stmt.column_name(i).map_err(|err| {
+                            Error::from_reason(format!(
+                                "Failed to get column name for index{}: {}",
+                                i, err
+                            ))
+                        })?;
+                        column_names.push(name.to_string());
+                    }
+                    let mut rows = stmt.query([]).map_err(|err| {
+                        Error::from_reason(format!("Failed to execute SQL: {} - {}", err, sql))
+                    })?;
+                    loop {
+                        match rows.next() {
+                            Ok(Some(row)) => {
+                                let mut row_obj = HashMap::new();
+                                for (i, col_name) in column_names.iter().enumerate() {
+                                    let val = row.get(i).unwrap();
+                                    row_obj.insert(col_name.clone(), val);
+                                }
+                                results.push(row_obj);
+                            }
+                            Ok(None) => break,
+                            Err(err) => {
+                                return Err(Error::from_reason(err.to_string()));
+                            }
+                        }
+                    }
                 }
-                results.push(row_obj);
+                Ok(None) => break, // Finished
+                Err(err) => {
+                    return Err(Error::from_reason(err.to_string()));
+                }
             }
         }
 
@@ -210,54 +325,105 @@ impl Database {
 
         let row_affected = conn.total_changes() - prev_changes;
 
-        let mut result = env.create_array(3)?;
-        result.set(0, 0)?;
+        Ok(move |env: Env| {
+            let mut result = env.create_array(3)?;
+            result.set(0, 0)?;
 
-        if results.is_empty() {
-            result.set(1, ())?; // Undefined
-        } else {
-            let mut result_rows = env.create_array(results.len() as u32)?;
-            for (i, row) in results.into_iter().enumerate() {
-                result_rows.set(i as u32, row)?;
+            if results.is_empty() {
+                result.set(1, ())?; // Undefined
+            } else {
+                let mut result_rows = env.create_array(results.len() as u32)?;
+                for (i, row) in results.into_iter().enumerate() {
+                    let mut row_obj = Object::new(&env)?;
+                    for (col_name, val) in row.iter() {
+                        row_obj.set(col_name, value_to_js_string(&env, val))?;
+                    }
+                    result_rows.set(i as u32, row_obj).unwrap();
+                }
+                result.set(1, result_rows)?;
             }
-            result.set(1, result_rows)?;
-        }
 
-        let mut perf = env.create_array(3)?;
-        perf.set(0, (t2 - t0).as_millis() as u32).unwrap();
-        perf.set(1, (t1 - t0).as_millis() as u32).unwrap();
-        perf.set(2, row_affected as f64).unwrap();
-        result.set(2, perf).unwrap();
+            let mut perf = env.create_array(3)?;
+            perf.set(0, (t2 - t0).as_millis() as u32).unwrap();
+            perf.set(1, (t1 - t0).as_millis() as u32).unwrap();
+            perf.set(2, row_affected as f64).unwrap();
+            result.set(2, perf).unwrap();
 
-        Ok(result)
+            Ok(result.raw())
+        })
     }
 
     /// Execute SQL string, returns an array of objects representing rows,
     /// and an array of performance info (total time, execution time, rows affected).
     ///
     /// For NCM, not intended for Open Orpheus.
-    #[napi(ts_return_type = "[number, Record<string, string>[], [number, number, number]]")]
-    pub fn execute_sql<'env>(&self, env: &'env Env, sql: String) -> Result<Array<'env>> {
-        Database::execute_sql_impl(env, &self.conn, sql)
+    #[napi(
+        ts_return_type = "Promise<[number, Record<string, string>[], [number, number, number]]>"
+    )]
+    pub fn execute_sql<'env>(&self, env: &'env Env, sql: String) -> Result<Object<'env>> {
+        let (deferred, object) = env.create_deferred()?;
+        let conn = self.conn.clone();
+        self.pool.execute(move || {
+            let conn = try_or_reject!(
+                conn.lock().map_err(|e| Error::from_reason(e.to_string())),
+                deferred
+            );
+            match Database::execute_sql_impl(&conn, sql) {
+                Ok(x) => {
+                    deferred.resolve(x);
+                }
+                Err(err) => {
+                    deferred.reject(err);
+                }
+            };
+        });
+        Ok(object)
     }
 
     /// Execute a SQL contains multiple statements as one transaction.
     ///
     /// For NCM, not intended for Open Orpheus.
-    #[napi(ts_return_type = "[number, Record<string, string>[], [number, number, number]]")]
+    #[napi(
+        ts_return_type = "Promise<[number, Record<string, string>[], [number, number, number]]>"
+    )]
     pub fn execute_transaction<'env>(
         &mut self,
         env: &'env Env,
         sql: String,
-    ) -> Result<Array<'env>> {
-        let tx = self
-            .conn
-            .transaction()
-            .map_err(|err| Error::from_reason(err.to_string()))?;
-        let ret = Database::execute_sql_impl(env, &tx, sql)?;
-        tx.commit()
-            .map_err(|err| Error::from_reason(err.to_string()))?;
-        Ok(ret)
+    ) -> Result<Object<'env>> {
+        let (deferred, object) = env.create_deferred()?;
+        let conn = self.conn.clone();
+        self.pool.execute(move || {
+            let mut conn = try_or_reject!(
+                conn.lock().map_err(|e| Error::from_reason(e.to_string())),
+                deferred
+            );
+            let tx = try_or_reject!(
+                conn.transaction()
+                    .map_err(|e| Error::from_reason(e.to_string())),
+                deferred
+            );
+            match Database::execute_sql_impl(&tx, sql) {
+                Ok(resolver) => {
+                    match tx
+                        .commit()
+                        .map_err(|err| Error::from_reason(err.to_string()))
+                    {
+                        Ok(_) => {
+                            deferred.resolve(resolver);
+                        }
+                        Err(err) => {
+                            deferred.reject(err);
+                        }
+                    };
+                }
+                Err(err) => {
+                    let _ = tx.rollback(); // Rollback first before rejecting
+                    deferred.reject(err);
+                }
+            };
+        });
+        Ok(object)
     }
 
     /// Execute multiple SQL statements inside an array, returns values of the last statement as an array.
@@ -274,12 +440,14 @@ impl Database {
     /// ```
     ///
     /// For NCM, not intended for Open Orpheus.
-    #[napi(ts_return_type = "{ value: unknown[][] }")]
+    #[napi(ts_return_type = "Promise<{ value: string[][] }>")]
     pub fn execute_sqls<'env>(
         &self,
         env: &'env Env,
         #[napi(ts_arg_type = "string[]")] sqls: Array,
     ) -> Result<Object<'env>> {
+        let (deferred, object) = env.create_deferred()?;
+
         let mut stmts = Vec::with_capacity(sqls.len() as usize);
 
         for i in 0..sqls.len() {
@@ -287,52 +455,84 @@ impl Database {
             stmts.push(sql);
         }
 
-        let mut value: Option<Unknown> = None;
-        for (i, sql) in stmts.iter().enumerate() {
-            let mut stmt = self.conn.prepare(sql).map_err(|err| {
-                Error::from_reason(format!("Failed to execute SQL: {} - {}", err, sql))
-            })?;
-            if i != stmts.len() - 1 {
-                // For all statements except the last one, we just execute them without fetching results
-                let _ = stmt.query([]).map_err(|err| {
-                    Error::from_reason(format!(
-                        "Failed to execute SQL statement: {} - {}",
+        let conn = self.conn.clone();
+
+        self.pool.execute(move || {
+            let conn = try_or_reject!(
+                conn.lock().map_err(|e| Error::from_reason(e.to_string())),
+                deferred
+            );
+            let mut results = Vec::new();
+            for (i, sql) in stmts.iter().enumerate() {
+                let mut stmt = try_or_reject!(
+                    conn.prepare(sql).map_err(|err| Error::from_reason(format!(
+                        "Failed to execute SQL: {} - {}",
                         err, sql
-                    ))
-                })?;
-            } else {
-                // For the last statement, we execute it and fetch results
-                let column_count = stmt.column_count();
-                let mut rows = stmt.query([]).map_err(|err| {
-                    Error::from_reason(format!(
-                        "Failed to execute SQL statement: {} - {}",
-                        err, sql
-                    ))
-                })?;
-                let mut results = Vec::new();
-                while let Ok(Some(row)) = rows.next() {
-                    let mut row_arr = env.create_array(column_count as u32)?;
-                    for i in 0..column_count {
-                        let val = row.get_ref(i).unwrap();
-                        let js_val = value_ref_to_js_string(env, val)?;
-                        row_arr.set(i as u32, js_val)?;
+                    ))),
+                    deferred
+                );
+                if i != stmts.len() - 1 {
+                    // For all statements except the last one, we just execute them without fetching results
+                    let _ = try_or_reject!(
+                        stmt.query([]).map_err(|err| {
+                            Error::from_reason(format!(
+                                "Failed to execute SQL statement: {} - {}",
+                                err, sql
+                            ))
+                        }),
+                        deferred
+                    );
+                } else {
+                    // For the last statement, we execute it and fetch results
+                    let column_count = stmt.column_count();
+                    let mut rows = try_or_reject!(
+                        stmt.query([]).map_err(|err| {
+                            Error::from_reason(format!(
+                                "Failed to execute SQL statement: {} - {}",
+                                err, sql
+                            ))
+                        }),
+                        deferred
+                    );
+                    loop {
+                        let row = try_or_reject!(
+                            rows.next().map_err(|e| Error::from_reason(e.to_string())),
+                            deferred
+                        );
+                        match row {
+                            Some(row) => {
+                                let mut row_arr = Vec::new();
+                                for i in 0..column_count {
+                                    let val = row.get(i).unwrap();
+                                    row_arr.push(val);
+                                }
+                                results.push(row_arr);
+                            }
+                            None => break,
+                        }
                     }
-                    results.push(row_arr);
                 }
-                if results.is_empty() {
-                    value = Some(().into_unknown(env)?); // Undefined
+            }
+            deferred.resolve(move |env| {
+                let value = if results.is_empty() {
+                    Some(().into_unknown(&env)?) // Undefined
                 } else {
                     let mut result_array = env.create_array(results.len() as u32)?;
                     for (i, row) in results.into_iter().enumerate() {
-                        result_array.set(i as u32, row).unwrap();
+                        let mut row_obj = env.create_array(row.len() as u32)?;
+                        for (i, val) in row.iter().enumerate() {
+                            row_obj.set(i as u32, value_to_js_string(&env, val))?;
+                        }
+                        result_array.set(i as u32, row_obj).unwrap();
                     }
-                    value = Some(result_array.into_unknown(env)?);
-                }
-            }
-        }
+                    Some(result_array.into_unknown(&env)?)
+                };
+                let mut result = Object::new(&env)?;
+                result.set("value", value.unwrap()).unwrap();
+                Ok(result)
+            });
+        });
 
-        let mut result = Object::new(env)?;
-        result.set("value", value.unwrap()).unwrap();
-        Ok(result)
+        Ok(object)
     }
 }

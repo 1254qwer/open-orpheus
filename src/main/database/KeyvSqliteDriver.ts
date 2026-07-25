@@ -1,16 +1,14 @@
-import { DatabaseSync, SQLInputValue } from "node:sqlite";
+import type { Database } from "@open-orpheus/database";
 
 import { SqliteDriver } from "@keyv/sqlite";
 
-function coerceParams(params: unknown[]): SQLInputValue[] {
+function coerceParams(params: unknown[]): unknown[] {
   return params.map((p) =>
-    p !== null && typeof p === "object"
-      ? JSON.stringify(p)
-      : (p as SQLInputValue)
+    p !== null && typeof p === "object" ? JSON.stringify(p) : p
   );
 }
 
-export default function getKeyvDriver(db: DatabaseSync) {
+export default function createKeyvSqliteDriver(db: Database): SqliteDriver {
   const driver: SqliteDriver = {
     name: "custom",
     async connect(): ReturnType<SqliteDriver["connect"]> {
@@ -23,9 +21,9 @@ export default function getKeyvDriver(db: DatabaseSync) {
             normalized.startsWith("PRAGMA") ||
             /\bRETURNING\b/.test(normalized)
           ) {
-            return db.prepare(sql).all(...p);
+            return (await db.exec(sql, p))[1];
           }
-          db.prepare(sql).run(...p);
+          await db.exec(sql, p);
           return [];
         },
         async close() {},

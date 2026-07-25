@@ -181,7 +181,7 @@ registerCallHandler<[string, string], void>(
   "storage.execsql",
   async (event, taskId, sql) => {
     try {
-      const execResult = webDb.executeSql(sql);
+      const execResult = await webDb.executeSql(sql);
       event.sender.send(
         "channel.call",
         "storage.onexecsqldone",
@@ -206,7 +206,7 @@ registerCallHandler<[string, string], void>(
   "storage.exectransaction",
   async (event, taskId, sql) => {
     try {
-      const execResult = webDb.executeTransaction(sql);
+      const execResult = await webDb.executeTransaction(sql);
       event.sender.send(
         "channel.call",
         "storage.onexecsqldone",

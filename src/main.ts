@@ -195,7 +195,7 @@ app.on("ready", async () => {
     registerOrpheusScheme(openOrpheusSession.protocol);
 
     await import("./main/database").then(async (m) => {
-      m.initializeDatabases();
+      await m.initializeDatabases();
       await import("./main/settings").then((m) => m.initialize());
     });
 
