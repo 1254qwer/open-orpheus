@@ -1,11 +1,17 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 5cc116fc70c26e729ee5c8a278e4b8289f42619b..113da4c7709263700103ed36a3aed21143d2820b 100644
+index 5cc116fc70c26e729ee5c8a278e4b8289f42619b..b399bbf45f4346281c258308be402933f69d8eb8 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
-@@ -30,49 +30,21 @@ let keyv = require("keyv");
+@@ -24,117 +24,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
+ 	enumerable: true
+ }) : target, mod));
+ //#endregion
+-const require_driver_utils = require("./driver-utils-CUbmhE_7.cjs");
+ let hookified = require("hookified");
+ let keyv = require("keyv");
  keyv = __toESM(keyv, 1);
  let node_util = require("node:util");
- //#region src/drivers/index.ts
+-//#region src/drivers/index.ts
 -async function loadDriver(name) {
 -	switch (name) {
 -		case "better-sqlite3": {
@@ -26,26 +32,20 @@ index 5cc116fc70c26e729ee5c8a278e4b8289f42619b..113da4c7709263700103ed36a3aed211
 -		default: throw new Error(`Unknown SQLite driver: ${name}`);
 -	}
 -}
- /**
- * Resolves which SQLite driver to use.
- *
- * - If `preferred` is a {@link SqliteDriver} object, it is returned directly.
+-/**
+-* Resolves which SQLite driver to use.
+-*
+-* - If `preferred` is a {@link SqliteDriver} object, it is returned directly.
 -* - If `preferred` is a driver name string, that specific driver is loaded (throws if unavailable).
 -* - If `preferred` is omitted, auto-detection tries drivers in priority order:
 -*   - **Bun**: `bun:sqlite` then `better-sqlite3`
 -*   - **Node.js**: `node:sqlite` then `better-sqlite3`
-+* - If `preferred` is omitted, uses `node:sqlite`
- */
- async function resolveDriver(preferred) {
+-*/
+-async function resolveDriver(preferred) {
 -	if (preferred !== void 0 && typeof preferred === "object" && "connect" in preferred) return preferred;
 -	if (typeof preferred === "string") try {
 -		return await loadDriver(preferred);
-+  if (preferred !== void 0 && typeof preferred === "object" && "connect" in preferred) return preferred;
-+	try {
-+		await import("node:sqlite");
-+    const { nodeSqliteDriver } = await Promise.resolve().then(() => require("./node-sqlite-driver-B-xX8Clp.cjs"));
-+    return nodeSqliteDriver;
- 	} catch (error) {
+-	} catch (error) {
 -		throw new Error(`Failed to load SQLite driver "${preferred}": ${error.message}`);
 -	}
 -	/* v8 ignore next -- @preserve: Bun runtime branch */
@@ -55,19 +55,95 @@ index 5cc116fc70c26e729ee5c8a278e4b8289f42619b..113da4c7709263700103ed36a3aed211
 -	} catch {}
 -	/* v8 ignore next 3 -- @preserve */
 -	throw new Error("No SQLite driver found. Use Node.js 22.13+ (built-in node:sqlite) or install better-sqlite3: npm install better-sqlite3");
-+		throw new Error(`Failed to load SQLite driver: ${error.message}`);
-+	}
- }
- //#endregion
- //#region src/drivers/sqlite3-driver.ts
+-}
+-//#endregion
+-//#region src/drivers/sqlite3-driver.ts
+-/**
+-* Creates a {@link SqliteDriver} backed by the user-provided `sqlite3` module.
+-*
+-* @example
+-* ```ts
+-* import sqlite3 from "sqlite3";
+-* import KeyvSqlite, { createSqlite3Driver } from "@keyv/sqlite";
+-*
+-* const store = new KeyvSqlite({
+-*   uri: "sqlite://path/to/database.sqlite",
+-*   driver: createSqlite3Driver(sqlite3),
+-* });
+-* ```
+-*/
+-function createSqlite3Driver(sqlite3) {
+-	return {
+-		name: "custom",
+-		async connect(options) {
+-			const db = await new Promise((resolve, reject) => {
+-				const instance = new sqlite3.Database(options.filename, (err) => {
+-					/* v8 ignore next 2 -- @preserve: error path */
+-					if (err) reject(err);
+-					else resolve(instance);
+-				});
+-			});
+-			const allAsync = (0, node_util.promisify)(db.all.bind(db));
+-			const runAsync = (0, node_util.promisify)(db.run.bind(db));
+-			const execAsync = (0, node_util.promisify)(db.exec.bind(db));
+-			const closeAsync = (0, node_util.promisify)(db.close.bind(db));
+-			if (options.busyTimeout) db.configure("busyTimeout", Number(options.busyTimeout));
+-			if (require_driver_utils.shouldApplyWal(options.filename, options.wal)) await execAsync("PRAGMA journal_mode = WAL");
+-			let queue = Promise.resolve();
+-			const query = async (sqlString, ...parameter) => {
+-				const safeParams = require_driver_utils.coerceParams(parameter);
+-				const trimmed = sqlString.trimStart().toUpperCase();
+-				return new Promise((resolve, reject) => {
+-					queue = queue.then(async () => {
+-						try {
+-							if (require_driver_utils.isReturningQuery(trimmed)) resolve(await allAsync(sqlString, safeParams));
+-							else {
+-								await runAsync(sqlString, safeParams);
+-								resolve([]);
+-							}
+-						} catch (error) {
+-							/* v8 ignore next -- @preserve: error path */
+-							reject(error);
+-						}
+-					});
+-				});
+-			};
+-			const close = async () => closeAsync();
+-			return {
+-				query,
+-				close
+-			};
+-		}
+-	};
+-}
+-//#endregion
+ //#region src/index.ts
+ /**
+ * Sanitizes a table name for safe use in SQL statements.
+@@ -764,7 +657,7 @@ var KeyvSqlite = class extends hookified.Hookified {
+ 	* @returns {Promise<Db>} An object with `query` and `close` functions for database operations.
+ 	*/
+ 	async createConnection() {
+-		const driver = await resolveDriver(this._driver);
++		const driver = this._driver;
+ 		this._resolvedDriverName = driver.name;
+ 		return driver.connect({
+ 			filename: this._db,
+@@ -852,4 +745,3 @@ exports.KeyvSqlite = KeyvSqlite;
+ exports.default = KeyvSqlite;
+ exports.__toESM = __toESM;
+ exports.createKeyv = createKeyv;
+-exports.createSqlite3Driver = createSqlite3Driver;
 diff --git a/dist/index.mjs b/dist/index.mjs
-index 2e9bc4e192f0647ce180ab9eeefee81f24d2527e..3021cc4f397f8c3ecc0c395eb202abd396cec82f 100644
+index 2e9bc4e192f0647ce180ab9eeefee81f24d2527e..ea2a7d58fe0874012431cb6aea1f1ade40cf01d2 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
-@@ -3,49 +3,21 @@ import { Hookified } from "hookified";
+@@ -1,113 +1,6 @@
+-import { i as shouldApplyWal, r as isReturningQuery, t as coerceParams } from "./driver-utils-C5M7Szj9.mjs";
+ import { Hookified } from "hookified";
  import Keyv, { keyvStorageCapability } from "keyv";
  import { promisify } from "node:util";
- //#region src/drivers/index.ts
+-//#region src/drivers/index.ts
 -async function loadDriver(name) {
 -	switch (name) {
 -		case "better-sqlite3": {
@@ -88,26 +164,20 @@ index 2e9bc4e192f0647ce180ab9eeefee81f24d2527e..3021cc4f397f8c3ecc0c395eb202abd3
 -		default: throw new Error(`Unknown SQLite driver: ${name}`);
 -	}
 -}
- /**
- * Resolves which SQLite driver to use.
- *
- * - If `preferred` is a {@link SqliteDriver} object, it is returned directly.
+-/**
+-* Resolves which SQLite driver to use.
+-*
+-* - If `preferred` is a {@link SqliteDriver} object, it is returned directly.
 -* - If `preferred` is a driver name string, that specific driver is loaded (throws if unavailable).
 -* - If `preferred` is omitted, auto-detection tries drivers in priority order:
 -*   - **Bun**: `bun:sqlite` then `better-sqlite3`
 -*   - **Node.js**: `node:sqlite` then `better-sqlite3`
-+* - If `preferred` is omitted, uses `node:sqlite`
- */
- async function resolveDriver(preferred) {
+-*/
+-async function resolveDriver(preferred) {
 -	if (preferred !== void 0 && typeof preferred === "object" && "connect" in preferred) return preferred;
 -	if (typeof preferred === "string") try {
 -		return await loadDriver(preferred);
-+  if (preferred !== void 0 && typeof preferred === "object" && "connect" in preferred) return preferred;
-+	try {
-+		await import("node:sqlite");
-+		const { nodeSqliteDriver } = await import("./node-sqlite-driver-2C9o0LqR.mjs");
-+		return nodeSqliteDriver;
- 	} catch (error) {
+-	} catch (error) {
 -		throw new Error(`Failed to load SQLite driver "${preferred}": ${error.message}`);
 -	}
 -	/* v8 ignore next -- @preserve: Bun runtime branch */
@@ -117,11 +187,86 @@ index 2e9bc4e192f0647ce180ab9eeefee81f24d2527e..3021cc4f397f8c3ecc0c395eb202abd3
 -	} catch {}
 -	/* v8 ignore next 3 -- @preserve */
 -	throw new Error("No SQLite driver found. Use Node.js 22.13+ (built-in node:sqlite) or install better-sqlite3: npm install better-sqlite3");
-+		throw new Error(`Failed to load SQLite driver: ${error.message}`);
-+	}
- }
+-}
+-//#endregion
+-//#region src/drivers/sqlite3-driver.ts
+-/**
+-* Creates a {@link SqliteDriver} backed by the user-provided `sqlite3` module.
+-*
+-* @example
+-* ```ts
+-* import sqlite3 from "sqlite3";
+-* import KeyvSqlite, { createSqlite3Driver } from "@keyv/sqlite";
+-*
+-* const store = new KeyvSqlite({
+-*   uri: "sqlite://path/to/database.sqlite",
+-*   driver: createSqlite3Driver(sqlite3),
+-* });
+-* ```
+-*/
+-function createSqlite3Driver(sqlite3) {
+-	return {
+-		name: "custom",
+-		async connect(options) {
+-			const db = await new Promise((resolve, reject) => {
+-				const instance = new sqlite3.Database(options.filename, (err) => {
+-					/* v8 ignore next 2 -- @preserve: error path */
+-					if (err) reject(err);
+-					else resolve(instance);
+-				});
+-			});
+-			const allAsync = promisify(db.all.bind(db));
+-			const runAsync = promisify(db.run.bind(db));
+-			const execAsync = promisify(db.exec.bind(db));
+-			const closeAsync = promisify(db.close.bind(db));
+-			if (options.busyTimeout) db.configure("busyTimeout", Number(options.busyTimeout));
+-			if (shouldApplyWal(options.filename, options.wal)) await execAsync("PRAGMA journal_mode = WAL");
+-			let queue = Promise.resolve();
+-			const query = async (sqlString, ...parameter) => {
+-				const safeParams = coerceParams(parameter);
+-				const trimmed = sqlString.trimStart().toUpperCase();
+-				return new Promise((resolve, reject) => {
+-					queue = queue.then(async () => {
+-						try {
+-							if (isReturningQuery(trimmed)) resolve(await allAsync(sqlString, safeParams));
+-							else {
+-								await runAsync(sqlString, safeParams);
+-								resolve([]);
+-							}
+-						} catch (error) {
+-							/* v8 ignore next -- @preserve: error path */
+-							reject(error);
+-						}
+-					});
+-				});
+-			};
+-			const close = async () => closeAsync();
+-			return {
+-				query,
+-				close
+-			};
+-		}
+-	};
+-}
+-//#endregion
+ //#region src/index.ts
+ /**
+ * Sanitizes a table name for safe use in SQL statements.
+@@ -737,7 +630,7 @@ var KeyvSqlite = class extends Hookified {
+ 	* @returns {Promise<Db>} An object with `query` and `close` functions for database operations.
+ 	*/
+ 	async createConnection() {
+-		const driver = await resolveDriver(this._driver);
++		const driver = this._driver;
+ 		this._resolvedDriverName = driver.name;
+ 		return driver.connect({
+ 			filename: this._db,
+@@ -821,4 +714,4 @@ var KeyvSqlite = class extends Hookified {
+ */
+ const createKeyv = (keyvOptions) => new Keyv({ store: new KeyvSqlite(keyvOptions) });
  //#endregion
- //#region src/drivers/sqlite3-driver.ts
+-export { KeyvSqlite, KeyvSqlite as default, createKeyv, createSqlite3Driver };
++export { KeyvSqlite, KeyvSqlite as default, createKeyv };
 diff --git a/package.json b/package.json
 index a7574c374064343ed2bd62a3689ddc41382283c2..a7d1eea12e94e35f2243cb0f39e7506fb390e632 100644
 --- a/package.json

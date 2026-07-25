@@ -8,9 +8,16 @@ function coerceParams(params: unknown[]): unknown[] {
   );
 }
 
-export default function createKeyvSqliteDriver(db: Database): SqliteDriver {
-  const driver: SqliteDriver = {
+export type DatabaseSqliteDriver = SqliteDriver & {
+  db: Database;
+};
+
+export default function createKeyvSqliteDriver(
+  db: Database
+): DatabaseSqliteDriver {
+  const driver: DatabaseSqliteDriver = {
     name: "custom",
+    db,
     async connect(): ReturnType<SqliteDriver["connect"]> {
       return {
         async query(sql, ...params) {
