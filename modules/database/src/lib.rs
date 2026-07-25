@@ -35,6 +35,7 @@ macro_rules! try_or_reject {
 
 #[napi]
 pub struct Database {
+    db_path: String,
     pool: ThreadPool,
     conn: Arc<Mutex<Connection>>,
 }
@@ -43,8 +44,8 @@ pub struct Database {
 impl Database {
     #[napi(constructor)]
     pub fn new(path: String) -> Result<Self> {
-        let pool = ThreadPool::new(1); // We are locking all along, so simply single threaded pool
         let conn = Connection::open(path).map_err(|err| Error::from_reason(err.to_string()))?;
+        let pool = ThreadPool::new(1); // We are locking all along, so simply single threaded pool
 
         // Register custom collations so SQL referencing COLLATE pinyin_desc / pinyin_asc works.
         let _ = conn.create_collation("pinyin_desc", |a: &str, b: &str| -> Ordering {
@@ -53,9 +54,16 @@ impl Database {
         let _ = conn.create_collation("pinyin_asc", collation::compare_pinyin);
 
         Ok(Self {
+            db_path: conn.path().unwrap_or("").to_string(),
             pool,
             conn: Arc::new(Mutex::new(conn)),
         })
+    }
+
+    /// Gets the path to database file.
+    #[napi(getter)]
+    pub fn file_path(&self) -> String {
+        self.db_path.clone()
     }
 
     /// Execute a single SQL statement with named parameters.

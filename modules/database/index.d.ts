@@ -2,6 +2,8 @@
 /* eslint-disable */
 export declare class Database {
   constructor(path: string)
+  /** Gets the path to database file. */
+  get filePath(): string
   /** Execute a single SQL statement with named parameters. */
   execNamed(sql: string, parameters: Record<string, unknown>): Promise<[number, Record<string, unknown>[]]>
   /** Execute a single SQL statement with positional (`?`) parameters. */

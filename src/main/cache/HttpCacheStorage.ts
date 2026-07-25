@@ -1,6 +1,7 @@
 import { KeyvSqlite } from "@keyv/sqlite";
 import { Keyv } from "keyv";
 import { calculateDbSize } from "../util";
+import type { DatabaseSqliteDriver } from "../database/KeyvSqliteDriver";
 
 export default class HttpCacheStorage extends Keyv {
   private driver: KeyvSqlite;
@@ -39,7 +40,10 @@ FROM pragma_page_count(), pragma_freelist_count(), pragma_page_size();`);
   }
 
   async diskSize() {
-    return await calculateDbSize(this.driver.db);
+    // We now always use our own driver
+    return await calculateDbSize(
+      (this.driver.driver as DatabaseSqliteDriver).db.filePath
+    );
   }
 
   async entryCount() {
