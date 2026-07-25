@@ -1,5 +1,8 @@
-use napi::{Env, Error, JsString, Result, Unknown, ValueType};
-use rusqlite::types::{Value, ValueRef};
+use napi::{
+    bindgen_prelude::{ArrayBuffer, Null, ToNapiValue},
+    Env, Error, JsString, Result, Unknown, ValueType,
+};
+use rusqlite::types::Value;
 
 macro_rules! err_wrapper {
     ($exp: expr) => {
@@ -35,12 +38,22 @@ pub fn js_to_rusqlite_value(val: Unknown) -> Result<Value> {
     Ok(Value::Null)
 }
 
-pub fn value_ref_to_js_string<'a>(env: &'a Env, val: ValueRef<'a>) -> Result<JsString<'a>> {
+pub fn value_to_js_string<'a>(env: &'a Env, val: &Value) -> Result<JsString<'a>> {
     match val {
-        ValueRef::Null => env.create_string(""),
-        ValueRef::Integer(i) => env.create_string(i.to_string()),
-        ValueRef::Real(f) => env.create_string(f.to_string()),
-        ValueRef::Text(t) => env.create_string(std::str::from_utf8(t).unwrap()),
-        ValueRef::Blob(b) => env.create_string(format!("{:?}", b)),
+        Value::Null => env.create_string(""),
+        Value::Integer(i) => env.create_string(i.to_string()),
+        Value::Real(f) => env.create_string(f.to_string()),
+        Value::Text(t) => env.create_string(t),
+        Value::Blob(b) => env.create_string(format!("{:?}", b)),
+    }
+}
+
+pub fn value_to_js_value<'a>(env: &'a Env, val: &Value) -> Result<Unknown<'a>> {
+    match val {
+        Value::Null => Null.into_unknown(env),
+        Value::Integer(i) => env.create_int64(*i).and_then(|x| x.into_unknown(env)),
+        Value::Real(f) => f.into_unknown(env),
+        Value::Text(t) => env.create_string(t).and_then(|x| x.into_unknown(env)),
+        Value::Blob(b) => ArrayBuffer::copy_from(env, b).and_then(|x| x.into_unknown(env)),
     }
 }

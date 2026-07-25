@@ -167,7 +167,7 @@ registerCallHandler<[string, string[]], [boolean]>(
   "musiclibrary.execSql",
   async (event, taskId, sql) => {
     try {
-      const result = musicLibraryDb.executeSqls(sql);
+      const result = await musicLibraryDb.executeSqls(sql);
       event.sender.send("channel.call", "musiclibrary.onexecsql", {
         error: 0,
         id: taskId,
@@ -205,10 +205,10 @@ registerCallHandler<[MusicLibraries], void>(
           if (!isMusicFile(filename)) return;
           const filePath = path.resolve(libPath, filename);
           const db = musicLibraryDb;
-          db.exec("DELETE FROM track WHERE file = ?", [filePath]);
+          await db.exec("DELETE FROM track WHERE file = ?", [filePath]);
           try {
             const entry = await trackEntryFromFile(lib, filePath);
-            db.execNamed(
+            await db.execNamed(
               `INSERT INTO track (file, tid, aid, dir, title, album, genre, artist, duration, timestamp, bitrate, filesize, ignored, id, artistid, parentdir, track, librarypath, tracknumber, source, starttime, type)
             VALUES (:file, :tid, :aid, :dir, :title, :album, :genre, :artist, :duration, :timestamp, :bitrate, :filesize, :ignored, :id, :artistid, :parentdir, :track, :librarypath, :tracknumber, :source, :starttime, :type)`,
               entry
@@ -266,18 +266,18 @@ registerCallHandler<[MusicLibraries, number], [boolean]>(
         }
         const db = musicLibraryDb;
 
-        const existingResult = db.exec(
+        const existingResult = await db.exec(
           "SELECT file, filesize, timestamp FROM track WHERE dir = ?",
           [library]
         );
-        const existingRows: Array<Record<string, string>> =
+        const existingRows: Array<Record<string, unknown>> =
           existingResult[1] ?? [];
         const existingMap = new Map<
           string,
           { filesize: number; timestamp: number }
         >();
         for (const row of existingRows) {
-          existingMap.set(row.file, {
+          existingMap.set(row.file as string, {
             filesize: Number(row.filesize),
             timestamp: Number(row.timestamp),
           });
@@ -310,8 +310,8 @@ registerCallHandler<[MusicLibraries, number], [boolean]>(
 
             if (needsUpdate) {
               const entry = await trackEntryFromFile(library, filePath);
-              db.exec("DELETE FROM track WHERE file = ?", [filePath]);
-              db.execNamed(
+              await db.exec("DELETE FROM track WHERE file = ?", [filePath]);
+              await db.execNamed(
                 `INSERT INTO track (file, tid, aid, dir, title, album, genre, artist, duration, timestamp, bitrate, filesize, ignored, id, artistid, parentdir, track, librarypath, tracknumber, source, starttime, type)
               VALUES (:file, :tid, :aid, :dir, :title, :album, :genre, :artist, :duration, :timestamp, :bitrate, :filesize, :ignored, :id, :artistid, :parentdir, :track, :librarypath, :tracknumber, :source, :starttime, :type)`,
                 entry
@@ -343,7 +343,7 @@ registerCallHandler<[MusicLibraries, number], [boolean]>(
         // If there are still files in the map, they are stale (in the db but not filesystem),
         // remove them here
         for (const staleFile of existingMap.keys()) {
-          db.exec("DELETE FROM track WHERE file = ?", [staleFile]);
+          await db.exec("DELETE FROM track WHERE file = ?", [staleFile]);
         }
 
         event.sender.send("channel.call", "musiclibrary.onaddend", {
@@ -373,7 +373,7 @@ registerCallHandler<[string], [boolean]>(
     (async () => {
       try {
         const db = musicLibraryDb;
-        db.exec("DELETE FROM track WHERE dir = ?", [library]);
+        await db.exec("DELETE FROM track WHERE dir = ?", [library]);
       } catch (err) {
         console.error("Failed to delete tracks from lib", library, err);
       }
