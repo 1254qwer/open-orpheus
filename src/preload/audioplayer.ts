@@ -2,8 +2,8 @@ import { ipcRenderer } from "electron";
 import { fireNativeCall } from "./channel";
 import Player, { AudioPlayerState } from "./Player";
 
-const PLAYING_EVENTS = ["play", "playing"];
-const HALTED_EVENTS = ["pause", "stalled", "ended", "error"];
+export const PLAYING_EVENTS = ["play", "playing"];
+export const HALTED_EVENTS = ["pause", "stalled", "ended", "error"];
 
 export const player = new Player();
 
@@ -75,25 +75,39 @@ player.audio.addEventListener("ended", () => {
     code: 0,
     errorCode: 0,
     errorString: "",
-    playedAudioTime: player.audio.duration || 0,
-    playedTime: player.audio.duration || 0,
+    playedAudioTime: player.audio.duration * 1000 || 0,
+    playedTime: player.audio.duration * 1000 || 0,
   });
 });
 
-player.audio.addEventListener("error", async () => {
-  // TODO: For network play errors, keep retrying in OnlineStreamer
+player.audio.addEventListener("error", async (e) => {
   const id = player.currentId;
   const playInfo = player.currentPlayInfo;
-  if (playInfo?.type === 4) {
-    const [res] = await ipcRenderer.invoke("channel.call", "network.fetch", {
-      url: playInfo.musicurl,
-      method: "HEAD",
-      retryCount: 3,
-    });
-    if (player.currentId !== id) return; // Check if the current audio has changed
-    if (res.status === 403) {
-      fireNativeCall("audioplayer.onrequestrefreshsongurl", playInfo);
+  try {
+    if (playInfo?.type === 4) {
+      const [res] = await ipcRenderer.invoke("channel.call", "network.fetch", {
+        url: playInfo.musicurl,
+        method: "HEAD",
+        retryCount: 3,
+      });
+      if (player.currentId !== id) return; // Check if the current audio has changed
+      if (res.status === 403) {
+        fireNativeCall("audioplayer.onrequestrefreshsongurl", playInfo);
+      } else {
+        // Not because of the expired link
+        throw e.error;
+      }
     }
+  } catch {
+    if (player.currentId !== id) return; // Check if the current audio has changed
+    fireNativeCall("audioplayer.onEnd", id, {
+      activeCode: 6,
+      code: 2,
+      errorCode: 3,
+      errorString: "",
+      playedAudioTime: player.audio.currentTime * 1000 || 0,
+      playedTime: player.audio.currentTime * 1000 || 0,
+    });
   }
 });
 

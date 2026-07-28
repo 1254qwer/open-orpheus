@@ -1,18 +1,17 @@
 import path, { join } from "node:path";
 import { readFile, stat } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { Readable } from "node:stream";
 
 import { Protocol } from "electron";
 import mime from "mime";
 
 import { OnlineStreamer } from "./audio/OnlineStreamer";
-
 import type { AudioPlayInfo } from "../preload/Player";
 import { mainWindow } from "./window";
 import { playCacheManager } from "./cache";
 import { normalizePath, sanitizeRelativePath } from "./util";
 import { data as dataDir, pack as packageDir } from "./folders";
-import { createReadStream } from "node:fs";
-import { Readable } from "node:stream";
 import { events as lifecycleEvents } from "./lifecycle";
 import { kv as settings } from "./settings";
 import { toError } from "../util";

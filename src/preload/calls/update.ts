@@ -10,7 +10,7 @@ registerCallHandler<[string], [string, string]>(
     } else if (module === "native") {
       return [NATIVE_VERSION, "64"];
     }
-    return ["", "64"] as unknown as [string, string];
+    return ["", "64"];
   }
 );
 

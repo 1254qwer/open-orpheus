@@ -1,13 +1,13 @@
 import { ipcRenderer } from "electron";
 
-import { player } from "./audioplayer";
+import { HALTED_EVENTS, player, PLAYING_EVENTS } from "./audioplayer";
 
-["play", "playing"].forEach((e) => {
+PLAYING_EVENTS.forEach((e) => {
   player.audio.addEventListener(e, () => {
     ipcRenderer.send("lyrics.setPlayState", true);
   });
 });
-["pause", "stalled", "ended", "error"].forEach((e) => {
+HALTED_EVENTS.forEach((e) => {
   player.audio.addEventListener(e, () => {
     ipcRenderer.send("lyrics.setPlayState", false);
   });

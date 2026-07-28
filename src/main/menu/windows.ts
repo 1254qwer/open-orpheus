@@ -1,5 +1,7 @@
-import { BrowserWindow } from "electron";
 import { join } from "node:path";
+
+import { BrowserWindow } from "electron";
+
 import { workaroundEnabled, WorkaroundFlags } from "./workaround";
 
 let menuWindow: BrowserWindow | null = null;

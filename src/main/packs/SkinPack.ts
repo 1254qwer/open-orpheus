@@ -4,6 +4,7 @@ import { open, stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 
 import unzipper from "unzipper";
+
 import Pack from "./Pack";
 
 const ZIP_PASSWORD = "apos189nbxdftgor";

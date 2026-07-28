@@ -1,8 +1,8 @@
 import { SECRET_KEY } from "../../constants";
-import { player } from "../audioplayer";
 import { registerCallHandler } from "../calls";
 import { fireNativeCall } from "../channel";
 import MusicRecognizer from "../MusicRecognizer";
+import { isMain } from "../util";
 
 // These are not needed?
 registerCallHandler<[], void>("app.statis", () => {
@@ -82,26 +82,32 @@ registerCallHandler<[string, string, object], void>(
   }
 );
 
-registerCallHandler<[{ path: string; pathtype: string }], void>(
-  "app.systemVoiceHint",
-  async (voice) => {
-    if (voice.pathtype !== "resource") {
-      console.warn("Unsupported voice hint type", voice.pathtype);
-      return;
+if (isMain) {
+  // Only main window will have audio system available
+  registerCallHandler<[{ path: string; pathtype: string }], void>(
+    "app.systemVoiceHint",
+    async (voice) => {
+      if (voice.pathtype !== "resource") {
+        console.warn("Unsupported voice hint type", voice.pathtype);
+        return;
+      }
+
+      const [player, arrayBuffer] = await Promise.all([
+        import("../audioplayer").then((m) => m.player),
+        fetch(`audio://resource/${voice.path}`).then((v) => v.arrayBuffer()),
+      ]);
+
+      const audioBuffer =
+        await player.audioContext.decodeAudioData(arrayBuffer);
+
+      const source = player.audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+
+      source.connect(player.gainNode);
+      source.start();
     }
-
-    const response = await fetch(`audio://resource/${voice.path}`);
-    const arrayBuffer = await response.arrayBuffer();
-
-    const audioBuffer = await player.audioContext.decodeAudioData(arrayBuffer);
-
-    const source = player.audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-
-    source.connect(player.gainNode);
-    source.start();
-  }
-);
+  );
+}
 
 const recognizeTasks = new Map<string, MusicRecognizer>();
 

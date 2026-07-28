@@ -14,10 +14,10 @@ registerCallHandler<[string], [boolean]>(
   "os.isFileExist",
   async (event, path) => {
     const filePath = isAbsolute(path)
-      ? path
+      ? normalizePath(path)
       : sanitizeRelativePath("data", path);
     if (filePath === false) return [false];
-    return [await fileExists(normalizePath(filePath))];
+    return [await fileExists(filePath)];
   }
 );
 
