@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
+import { basename, extname } from "node:path";
 
 import { MusicFile } from "music-tag-native";
 import type { Progress } from "got";
@@ -8,7 +9,6 @@ import { registerCallHandler } from "../calls";
 import { serialData } from "../crypto";
 import { client, type ProxyTypes } from "../request";
 import { isFileNotFound, normalizePath } from "../util";
-import { basename, extname } from "node:path";
 
 type UploadPayload = {
   encrypt: 0 | 1;

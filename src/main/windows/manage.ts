@@ -3,6 +3,7 @@ import path, { resolve } from "node:path";
 import { readdir, stat, rm } from "node:fs/promises";
 
 import { app, BrowserWindow, Menu } from "electron";
+
 import packManager from "../pack";
 import WebPack from "../packs/WebPack";
 import { wasm as wasmDir } from "../folders";

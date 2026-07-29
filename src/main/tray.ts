@@ -12,7 +12,6 @@ import {
 
 import { mainWindow } from "./window";
 import { kv as settings } from "./settings";
-
 import showManageWindow from "./windows/manage";
 
 import iconFilename from "../../assets/icon_256.png?no-inline";

@@ -1,5 +1,6 @@
-import { app } from "electron";
 import { resolve } from "node:path";
+
+import { app } from "electron";
 
 export const downloadTemp = resolve(
   app.getPath("temp"),

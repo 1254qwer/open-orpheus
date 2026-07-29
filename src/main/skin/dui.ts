@@ -1,4 +1,5 @@
 import { DOMParser, type Element } from "@xmldom/xmldom";
+
 import type {
   BtnImages,
   BtnState,

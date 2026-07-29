@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { BrowserWindow } from "electron";
+
 import packManager from "../pack";
 
 export default function showPackgeDownloadWindow(): Promise<void> {

@@ -1,5 +1,6 @@
-import { Ncae, NcaeHeader, NcaeType } from "$sharedTypes/ncae";
 import { inflateRaw } from "node:zlib";
+
+import { Ncae, NcaeHeader, NcaeType } from "$sharedTypes/ncae";
 
 // #region Binary layout
 

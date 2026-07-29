@@ -2,7 +2,6 @@ import { BrowserWindow, screen } from "electron";
 import { join, normalize } from "node:path";
 
 import Emittery from "emittery";
-
 import {
   captureNextWindowFirstCursorEnter,
   DesktopEnvironment,
@@ -28,7 +27,6 @@ import type { MenuContract } from "../bridge/contracts/menu-api";
 import { parseBtnUrl, parseElementTemplate } from "./skin/dui";
 import type { ElementTemplate } from "./skin/dui";
 import { registerInputRegionHandlers } from "../bridge/common/inputRegion";
-
 import type { AppMenuItem } from "$sharedTypes/menu";
 import { font } from "./gui";
 

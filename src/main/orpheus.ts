@@ -1,6 +1,5 @@
 import { dirname, extname, resolve } from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-
 import { createHash } from "node:crypto";
 
 import { Protocol } from "electron";

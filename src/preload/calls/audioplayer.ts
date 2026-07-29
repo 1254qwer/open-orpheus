@@ -14,7 +14,7 @@ registerCallHandler<[string, AudioPlayInfo], void>(
 registerCallHandler<[AudioPlayInfo], void>(
   "audioplayer.setRefreshSongUrlResult",
   async (result) => {
-    if (player.currentPlayInfo?.playId !== result.playId) return;
+    if (player.currentId !== result.playId) return;
     await player.load(result);
   }
 );
@@ -171,50 +171,51 @@ registerCallHandler<[string, { device: AudioDeviceInit; type: string }], void>(
   }
 );
 
-function mediaDeviceInfoToDevice(device: MediaDeviceInfo): AudioDeviceInfo {
+function mediaDeviceInfoToAudioDeviceInfo(
+  device: MediaDeviceInfo
+): AudioDeviceInfo {
   return {
     deviceId: device.deviceId,
     id: -1,
     name: device.label,
-    type: "Chromium",
+    type: "WebAudio",
   };
 }
 registerCallHandler<[string], void>(
   "audioplayer.enmeratorDevices",
   (deviceType) => {
-    navigator.mediaDevices.enumerateDevices().then((devices) => {
-      const filteredDevices = devices.filter((device) => {
-        if (deviceType === "getOutDevices") {
-          return device.kind === "audiooutput";
-        }
-        return false;
+    navigator.mediaDevices.enumerateDevices().then((mediaDevices) => {
+      let defaultDevice: AudioDeviceInfo | null = null;
+      let currentDevice: AudioDeviceInfo | null = null;
+      const devices = mediaDevices.flatMap((device) => {
+        if (deviceType !== "getOutDevices" || device.kind !== "audiooutput")
+          return [];
+        const deviceInfo = mediaDeviceInfoToAudioDeviceInfo(device);
+        if (device.deviceId === "default") defaultDevice = deviceInfo;
+        if (
+          device.deviceId ===
+          (player.audioContext as unknown as HTMLAudioElement).sinkId
+        )
+          currentDevice = deviceInfo;
+        return [deviceInfo];
       });
-      let defaultDeviceInfo: MediaDeviceInfo | null = null;
-      let currentAudioOutputDeviceInfo: MediaDeviceInfo | null = null;
+
       fireNativeCall(
         "audioplayer.onEnmeratorDevices",
         deviceType,
         [
           {
-            devices: filteredDevices.map((device) => {
-              if (
-                device.deviceId ===
-                (player.audioContext as unknown as HTMLAudioElement).sinkId
-              ) {
-                currentAudioOutputDeviceInfo = device;
-              } else if (device.deviceId === "default") {
-                defaultDeviceInfo = device;
-              }
-              return mediaDeviceInfoToDevice(device);
-            }),
-            type: "Chromium",
+            type: "WebAudio",
+            devices,
           },
         ],
-        currentAudioOutputDeviceInfo
-          ? mediaDeviceInfoToDevice(currentAudioOutputDeviceInfo)
-          : defaultDeviceInfo
-            ? mediaDeviceInfoToDevice(defaultDeviceInfo)
-            : { deviceId: "default", id: -1, name: "Default", type: "Wasapi" }
+        currentDevice ??
+          defaultDevice ?? {
+            deviceId: "default",
+            id: -1,
+            type: "WebAudio",
+            name: "Default",
+          }
       );
     });
   }

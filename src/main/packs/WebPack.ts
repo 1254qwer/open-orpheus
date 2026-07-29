@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs";
 import { open, stat } from "node:fs/promises";
 
 import unzipper from "unzipper";
+
 import Pack from "./Pack";
 
 // RSA-512 SubjectPublicKeyInfo (DER) used for web-pack signature verification

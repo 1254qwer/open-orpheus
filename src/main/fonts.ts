@@ -1,4 +1,5 @@
 import { getCjkFonts } from "@open-orpheus/ui";
+
 import { events as lifecycleEvents } from "./lifecycle";
 
 lifecycleEvents.on("mainwindowcreated", (e) => {

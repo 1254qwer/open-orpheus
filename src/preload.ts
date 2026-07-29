@@ -3,11 +3,11 @@
 
 import { contextBridge, ipcRenderer } from "electron";
 
+import { isMain } from "./preload/util";
+
 import "./preload/channel";
 
 import "./preload/calls/index";
-
-const isMain = process.argv.includes("--preload-channel=main");
 
 async function getCJKFonts(): Promise<string[]> {
   return await ipcRenderer.invoke("fonts.getCJKFonts");

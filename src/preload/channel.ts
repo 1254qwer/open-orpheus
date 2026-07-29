@@ -4,7 +4,8 @@ import { dispatcher } from "./calls";
 const CALL_DEBUG = false; // Set to true to enable debug logs for channel.call
 let _callDebugId = 0;
 
-const nativeCallbacks = new Map<string, (...args: unknown[]) => void>();
+const nativeCallbacks: Record<string, (...args: unknown[]) => void> =
+  Object.create(null);
 
 ipcRenderer.on(
   "channel.call",
@@ -25,7 +26,7 @@ export function fireNativeCall<Args extends unknown[]>(
     // Avoid logging the very frequent calls to reduce noise
     console.debug(`Received nativeCall: ${command} with args:`, args);
   }
-  const callback = nativeCallbacks.get(command);
+  const callback = nativeCallbacks[command];
   callback?.(...args);
 }
 
@@ -79,7 +80,7 @@ contextBridge.exposeInMainWorld("channel", {
     }
   },
   registerCall: (cmdEvent: string, callback: (...args: unknown[]) => void) => {
-    nativeCallbacks.set(cmdEvent, callback);
+    nativeCallbacks[cmdEvent] = callback;
   },
   viewCall: () => {
     // TODO: Confirm if we need to hardcode this just like this or we track?

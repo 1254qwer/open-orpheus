@@ -3,17 +3,17 @@ import { join } from "node:path";
 import { BrowserWindow } from "electron";
 import photon from "@silvia-odwyer/photon-node";
 import psd from "@webtoon/psd";
+import { DOMParser, Element } from "@xmldom/xmldom";
+import { dragWindow } from "@open-orpheus/window";
 
 import { mainWindow, setWindowId } from "../window";
 import { registerIpcHandlers } from "../../bridge/register";
 import { MiniPlayerContract } from "../../bridge/contracts/mini-player-api";
 import type { BtnImages, BtnState } from "../../../types/dui";
-import { dragWindow } from "@open-orpheus/window";
 import { registerInputRegionHandlers } from "../../bridge/common/inputRegion";
 import packManager from "../pack";
 import type SkinPack from "../packs/SkinPack";
 import { extractColor } from "../skin/color";
-import { DOMParser, Element } from "@xmldom/xmldom";
 import { argbToCss, parseBtnState } from "../skin/dui";
 import type {
   MiniPlayerLikeMark,
@@ -153,9 +153,13 @@ packManager.on("skin2packloaded", async (event) => {
       let img: photon.PhotonImage;
       if (buf.subarray(0, 4).toString("ascii") === "8BPS") {
         // It's a PSD, convert it (Netease is so freaking stupid)
-        const p = psd.parse(new Uint8Array(buf).buffer);
+        const p = psd.parse(buf.buffer as ArrayBuffer);
         const data = await p.composite();
-        img = new photon.PhotonImage(new Uint8Array(data), p.width, p.height);
+        img = new photon.PhotonImage(
+          new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+          p.width,
+          p.height
+        );
       } else {
         img = photon.PhotonImage.new_from_byteslice(buf);
       }

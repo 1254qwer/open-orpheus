@@ -1,3 +1,5 @@
+import { dirname } from "node:path";
+
 import {
   LineMode,
   ShowTranslate,
@@ -33,7 +35,6 @@ import {
   updateTogetherStatus,
   updateMute,
 } from "../windows/mini-player";
-import { dirname } from "node:path";
 import { setFont } from "../gui";
 
 let listItems: ListElement[] = [];
