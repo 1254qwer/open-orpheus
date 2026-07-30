@@ -108,6 +108,11 @@ export default function createDesktopLyricsWindow() {
   }
   setWindowId(desktopLyricsWindow, "desktop_lyrics");
 
+  desktopLyricsWindow.on("blur", () => {
+    if (!desktopLyricsWindow || desktopLyricsWindow.isDestroyed()) return;
+    desktopLyricsWindow.webContents.send("desktopLyrics.blur");
+  });
+
   desktopLyricsWindow.on("close", (e) => {
     if (lifecycleState === LifecycleState.Quitting) return; // If the app is quitting we allow the window to close
     // Not closing, but telling NCM to hide.
