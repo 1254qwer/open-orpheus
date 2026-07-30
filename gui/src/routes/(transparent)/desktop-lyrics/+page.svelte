@@ -183,7 +183,6 @@
         enableFullInteraction = false;
       }, 1000);
     }}
-    {@attach enableFullInteraction && !locked && inputRegionAttachment}
   >
     <div
       class="flex justify-center gap-2 {locked
@@ -241,7 +240,8 @@
         enableFullInteraction = true;
       }}
       lineattrs={{
-        [createAttachmentKey()]: !locked && inputRegionAttachment,
+        [createAttachmentKey()]:
+          !enableFullInteraction && !locked && inputRegionAttachment,
         [createAttachmentKey()]: lineHoverAttachment,
       }}
     />
