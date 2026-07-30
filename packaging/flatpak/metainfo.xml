@@ -62,6 +62,21 @@
   </screenshots>
 
   <releases>
+    <release version="0.16.1" date="2026-07-30">
+      <url type="details">https://github.com/YUCLing/open-orpheus/releases/tag/v0.16.1</url>
+      <description>
+        <ul>
+          <li>Minor memory optimization.</li>
+          <li xml:lang="zh-CN">微量内存优化。</li>
+          <li>Changed database from synchronous to asynchronous.</li>
+          <li xml:lang="zh-CN">将数据库从同步改为异步。</li>
+          <li>Code cleanup.</li>
+          <li xml:lang="zh-CN">整理代码。</li>
+          <li>Improved desktop lyrics interaction.</li>
+          <li xml:lang="zh-CN">改进桌面歌词交互。</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.16.0" date="2026-07-15">
       <url type="details">https://github.com/YUCLing/open-orpheus/releases/tag/v0.16.0</url>
       <description>
