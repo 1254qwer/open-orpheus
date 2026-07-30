@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { createAttachmentKey } from "svelte/attachments";
+
   import LyricsComponent from "$lib/components/Lyrics.svelte";
   import type { LyricsStyle } from "$sharedTypes/desktop-lyrics";
   import type { Lyrics, LyricsStore } from "$sharedTypes/lyrics";
@@ -16,8 +18,26 @@
     getTime,
   } from "$lib/lyrics";
   import * as settings from "$lib/settings";
+  import multihover from "$lib/multihover";
 
   const api = getBridge<DesktopLyricsContract>("desktopLyrics");
+
+  let enableFullInteraction = $state(false);
+  let enableTimer: ReturnType<typeof setTimeout> | undefined;
+  let disableTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const lineHoverAttachment = multihover(
+    () => {
+      clearTimeout(disableTimer);
+      enableTimer = setTimeout(() => {
+        enableFullInteraction = true;
+      }, 1000);
+    },
+    () => {
+      clearTimeout(enableTimer);
+    },
+    100
+  );
 
   let opacity = $state(1);
   let lyricStyle = $state<LyricsStyle | null>(null);
@@ -100,6 +120,11 @@
       offset = newOffset;
     });
 
+    api.events.blur(() => {
+      clearTimeout(enableTimer);
+      enableFullInteraction = false;
+    });
+
     api.requestFullUpdate();
 
     const updateLyrics = (store: LyricsStore | null) => {
@@ -144,23 +169,38 @@
   <div
     class={cn(
       "group flex h-screen w-screen items-center justify-evenly overflow-hidden rounded-lg p-2 select-none",
-      !locked && "hover:bg-black/40"
+      !locked && enableFullInteraction && "bg-black/40"
     )}
     class:cursor-grab={!locked}
     class:flex-col={!lyricStyle.vertical}
-    onmousedown={onDrag}
+    onpointerdown={onDrag}
+    onpointerenter={() => {
+      clearTimeout(disableTimer);
+    }}
+    onpointerleave={() => {
+      clearTimeout(enableTimer);
+      disableTimer = setTimeout(() => {
+        enableFullInteraction = false;
+      }, 1000);
+    }}
+    {@attach enableFullInteraction && !locked && inputRegionAttachment}
   >
     <div
-      class="flex justify-center gap-2 {api.platform === 'linux' && locked
-        ? 'opacity-25 group-hover:opacity-100'
-        : 'invisible group-hover:visible'} {lyricStyle.vertical
-        ? 'w-12 flex-col'
-        : 'h-12'}"
+      class="flex justify-center gap-2 {locked
+        ? api.platform === 'linux'
+          ? 'opacity-25 group-hover:opacity-100'
+          : 'invisible group-hover:visible'
+        : !enableFullInteraction
+          ? 'invisible'
+          : ''} {lyricStyle.vertical ? 'w-12 flex-col' : 'h-12'}"
     >
       {#if locked}
         <button
           class="size-12 cursor-pointer"
-          onclick={() => api.performAction("unlock")}
+          onclick={() => {
+            enableFullInteraction = true;
+            api.performAction("unlock");
+          }}
           title="解锁桌面歌词"
           {@attach inputRegionAttachment}
           ><img
@@ -176,7 +216,7 @@
             active={`gui://skin/lrc/${icon}_push.svg`}
             disable={`gui://skin/lrc/${icon}_dis.svg`}
             {disabled}
-            onmousedown={(e) => {
+            onpointerdown={(e) => {
               e.stopPropagation();
             }}
             onclick={() => api.performAction(action)}
@@ -197,6 +237,13 @@
       {useProgress}
       class={lyricStyle.vertical ? "h-full" : "w-full"}
       style="opacity: {opacity};"
+      onlinepointerdown={() => {
+        enableFullInteraction = true;
+      }}
+      lineattrs={{
+        [createAttachmentKey()]: !locked && inputRegionAttachment,
+        [createAttachmentKey()]: lineHoverAttachment,
+      }}
     />
   </div>
 {/if}

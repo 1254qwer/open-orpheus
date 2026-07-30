@@ -6,6 +6,7 @@ export interface DesktopLyricsContract {
     styleUpdate(callback: (style: LyricsStyle) => void): void;
     lockUpdate(callback: (locked: boolean) => void): void;
     offsetUpdate(callback: (offset: number) => void): void;
+    blur(callback: () => void): void;
   };
   requestFullUpdate(): Promise<void>;
   dragWindow(): Promise<void>;

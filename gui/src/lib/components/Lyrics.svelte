@@ -13,6 +13,10 @@
     lyricStyle: style,
     useProgress = true,
     class: className,
+    onlinepointerdown,
+    onlinepointerenter,
+    onlinepointerleave,
+    lineattrs,
     ...rest
   }: {
     lyrics: LyricLine[] | null;
@@ -22,6 +26,10 @@
     lyricStyle: LyricsStyle;
     useProgress?: boolean;
     slogan?: string | null;
+    onlinepointerdown?: (e: PointerEvent) => void;
+    onlinepointerenter?: (e: PointerEvent) => void;
+    onlinepointerleave?: (e: PointerEvent) => void;
+    lineattrs?: HTMLAttributes<HTMLDivElement>;
   } & HTMLAttributes<HTMLDivElement> = $props();
 
   // Binary search for the current line index
@@ -278,6 +286,20 @@
   let shadowStyle = $derived(
     style.dropShadow ? `filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));` : ""
   );
+
+  let lineHoveredCount = 0;
+  function onLinePointerEnter(e: PointerEvent) {
+    if (lineHoveredCount === 0) {
+      onlinepointerenter?.(e);
+    }
+    lineHoveredCount++;
+  }
+  function onLinePointerLeave(e: PointerEvent) {
+    lineHoveredCount--;
+    if (lineHoveredCount === 0) {
+      onlinepointerleave?.(e);
+    }
+  }
 </script>
 
 {#if lyrics || slogan}
@@ -362,6 +384,10 @@
           style={style.vertical
             ? `transform: translateY(-${line1Scroll}px);`
             : `transform: translateX(-${line1Scroll}px);`}
+          onpointerdown={onlinepointerdown}
+          onpointerenter={onLinePointerEnter}
+          onpointerleave={onLinePointerLeave}
+          {...lineattrs}
         >
           {@render lyricLineContent(primaryLine, primaryProgress)}
         </div>
@@ -393,6 +419,10 @@
           style={style.vertical
             ? `transform: translateY(-${line2Scroll}px);`
             : `transform: translateX(-${line2Scroll}px);`}
+          onpointerdown={onlinepointerdown}
+          onpointerenter={onLinePointerEnter}
+          onpointerleave={onLinePointerLeave}
+          {...lineattrs}
         >
           {@render lyricLineContent(secondaryLine, secondaryProgress)}
         </div>
