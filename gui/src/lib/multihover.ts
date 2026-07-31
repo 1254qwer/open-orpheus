@@ -1,4 +1,4 @@
-type Attachment = (el: HTMLElement | null | undefined) => () => void;
+import type { Attachment } from "svelte/attachments";
 
 export default function multihover(
   onenter?: (e: PointerEvent) => void,
@@ -28,7 +28,7 @@ export default function multihover(
   };
 
   return (el) => {
-    if (!(el instanceof HTMLElement)) return () => {};
+    if (!(el instanceof HTMLElement)) return;
 
     const handleEnter = (e: PointerEvent) => {
       if (debounceTimer !== undefined) {
