@@ -16,13 +16,10 @@ async function getCJKFonts(): Promise<string[]> {
 if (isMain) {
   // Lyrics is only used in main window
   import("./preload/lyrics");
-
-  // Expose it so it can be fetched in the main world later
-  contextBridge.exposeInMainWorld("_OPEN_ORPHEUS_getCJKFonts", getCJKFonts);
 }
 
 contextBridge.executeInMainWorld({
-  func: (isMain: boolean) => {
+  func: (isMain: boolean, getFonts: typeof getCJKFonts) => {
     const originalContentDocumentDescriptor = Object.getOwnPropertyDescriptor(
       HTMLIFrameElement.prototype,
       "contentDocument"
@@ -73,14 +70,6 @@ contextBridge.executeInMainWorld({
 
     if (isMain) {
       const systemFonts = new Set();
-
-      // Take the function and remove it
-      const getFonts = (
-        window as unknown as { _OPEN_ORPHEUS_getCJKFonts: typeof getCJKFonts }
-      )["_OPEN_ORPHEUS_getCJKFonts"];
-      delete (window as unknown as Record<string, unknown>)[
-        "_OPEN_ORPHEUS_getCJKFonts"
-      ];
 
       getFonts().then((fonts) => {
         for (const font of fonts) systemFonts.add(font);
@@ -145,5 +134,5 @@ contextBridge.executeInMainWorld({
       window.addEventListener("mousemove", handlerRemover);
     }
   },
-  args: [isMain],
+  args: [isMain, getCJKFonts],
 });
