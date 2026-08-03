@@ -9,8 +9,8 @@ import "./preload/channel";
 
 import "./preload/calls/index";
 
-async function getCJKFonts(): Promise<string[]> {
-  return await ipcRenderer.invoke("fonts.getCJKFonts");
+async function getSCFonts(): Promise<string[]> {
+  return await ipcRenderer.invoke("fonts.getSCFonts");
 }
 
 if (isMain) {
@@ -19,7 +19,7 @@ if (isMain) {
 }
 
 contextBridge.executeInMainWorld({
-  func: (isMain: boolean, getFonts: typeof getCJKFonts) => {
+  func: (isMain: boolean, getFonts: typeof getSCFonts) => {
     const originalContentDocumentDescriptor = Object.getOwnPropertyDescriptor(
       HTMLIFrameElement.prototype,
       "contentDocument"
@@ -134,5 +134,5 @@ contextBridge.executeInMainWorld({
       window.addEventListener("mousemove", handlerRemover);
     }
   },
-  args: [isMain, getCJKFonts],
+  args: [isMain, getSCFonts],
 });
