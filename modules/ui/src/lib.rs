@@ -25,10 +25,10 @@ pub fn get_system_fonts<'env>(env: &'env Env) -> Result<Array<'env>> {
     Ok(arr)
 }
 
-pub struct AsyncCJKFontTask;
+pub struct AsyncSCFontTask;
 
 #[napi]
-impl<'env> ScopedTask<'env> for AsyncCJKFontTask {
+impl<'env> ScopedTask<'env> for AsyncSCFontTask {
     type Output = Vec<String>;
 
     type JsValue = Array<'env>;
@@ -43,7 +43,7 @@ impl<'env> ScopedTask<'env> for AsyncCJKFontTask {
         Ok(fonts
             .iter()
             .filter_map(|x| x.load().ok())
-            .filter(|x| x.glyph_for_char('中').is_some())
+            .filter(|x| x.glyph_for_char('认').is_some())
             .map(|x| x.family_name())
             .collect())
     }
@@ -59,9 +59,9 @@ impl<'env> ScopedTask<'env> for AsyncCJKFontTask {
     }
 }
 
-/// Get all fonts that can render CJK characters, note that this will attempt to load all fonts
+/// Get all fonts that can render SC (Simplified Chinese) characters, note that this will attempt to load all fonts
 /// to determine whether it matches the requirements or not.
 #[napi(ts_return_type = "Promise<string[]>")]
-pub fn get_cjk_fonts() -> AsyncTask<AsyncCJKFontTask> {
-    AsyncTask::new(AsyncCJKFontTask {})
+pub fn get_sc_fonts() -> AsyncTask<AsyncSCFontTask> {
+    AsyncTask::new(AsyncSCFontTask {})
 }

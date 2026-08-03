@@ -587,5 +587,5 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
-module.exports.getCjkFonts = nativeBinding.getCjkFonts
+module.exports.getScFonts = nativeBinding.getScFonts
 module.exports.getSystemFonts = nativeBinding.getSystemFonts
