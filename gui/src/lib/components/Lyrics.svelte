@@ -70,6 +70,17 @@
     return Math.max(0, Math.min(1, (time - line.start_time) / duration));
   }
 
+  // Approximate visual width in ch units: CJK/fullwidth = 2ch, Latin/etc = 1ch
+  const CJK_RE =
+    /[\u3000-\u303F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\uFF01-\uFF60\uFFE0-\uFFE6]/;
+  function chWidth(text: string): number {
+    let w = 0;
+    for (const ch of text) {
+      w += CJK_RE.test(ch) ? 2 : 1;
+    }
+    return w;
+  }
+
   // Compute per-word progress: returns progress percentage for the whole line
   // considering individual word timings
   function wordProgress(line: LyricLine, time: number): number {
@@ -80,27 +91,28 @@
     const elapsed = time - line.start_time;
     if (elapsed <= 0) return 0;
 
-    // Calculate total text length for proportional mapping
-    let totalLen = 0;
-    for (const w of words) totalLen += w.text.length;
-    if (totalLen === 0) return lineProgress(line, time);
+    // Calculate total text width (in ch units) for proportional mapping
+    let totalCh = 0;
+    for (const w of words) totalCh += chWidth(w.text);
+    if (totalCh === 0) return lineProgress(line, time);
 
-    let filledLen = 0;
+    let filledCh = 0;
     for (const w of words) {
       const wordStart = w.start_time;
       const wordEnd = w.start_time + w.duration;
+      const ww = chWidth(w.text);
       if (elapsed >= wordEnd) {
-        filledLen += w.text.length;
+        filledCh += ww;
       } else if (elapsed > wordStart) {
         const wordProg =
           w.duration > 0 ? (elapsed - wordStart) / w.duration : 1;
-        filledLen += w.text.length * wordProg;
+        filledCh += ww * wordProg;
         break;
       } else {
         break;
       }
     }
-    return Math.max(0, Math.min(1, filledLen / totalLen));
+    return Math.max(0, Math.min(1, filledCh / totalCh));
   }
 
   let adjustedTime = $derived(currentTime + offset);
