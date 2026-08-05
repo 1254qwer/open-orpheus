@@ -32,7 +32,7 @@
 
 {#await opacityPromise then}
   <div class="my-4">
-    <p class="text-lg font-bold mb-2">桌面歌词透明度</p>
+    <p class="mb-2 text-lg font-bold">桌面歌词透明度</p>
     <div class="flex gap-4">
       <Slider
         type="single"
