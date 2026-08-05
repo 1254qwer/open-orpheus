@@ -234,6 +234,15 @@ app.on("ready", async () => {
       import("./main/request").then(async (m) => {
         m.setupRequestInterceptors();
 
+        // Set the proxy for both the app and our sessions
+        const setProxy = async (config: Parameters<typeof app.setProxy>[0]) => {
+          await Promise.all([
+            app.setProxy(config),
+            session.defaultSession.setProxy(config),
+            openOrpheusSession.setProxy(config),
+          ]);
+        };
+
         // Apply stored proxy settings
         const { kv: settings } = await import("./main/settings");
         const proxy = await settings.get("proxy");
@@ -244,13 +253,13 @@ app.on("ready", async () => {
 
           switch (cfg.Type) {
             case "ie":
-              app.setProxy({ mode: "system" });
+              await setProxy({ mode: "system" });
               break;
             case "http":
             case "socks4":
             case "socks5": {
               const srv = cfg[cfg.Type]!;
-              app.setProxy({
+              await setProxy({
                 mode: "fixed_servers",
                 proxyRules: `${cfg.Type}://${srv.Host}:${srv.Port}`,
               });
@@ -264,7 +273,7 @@ app.on("ready", async () => {
               break;
             }
             default:
-              app.setProxy({ mode: "direct" });
+              await setProxy({ mode: "direct" });
               break;
           }
 
