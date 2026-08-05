@@ -1,4 +1,4 @@
-import { dirname, extname, resolve } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
@@ -391,15 +391,28 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
         try {
           const taggedFile = await MusicFile.load(path);
           const lyrics = taggedFile.lyrics;
-          if (!lyrics) {
-            // NCM accepts everything, must return with hard error
-            throw lyrics; // try catch will convert it to NetworkError
+          if (lyrics) {
+            return {
+              content: lyrics,
+              contentType: "text/plain",
+            };
           }
+        } catch {
+          /* empty */
+        }
+        try {
+          // No embedded lyrics: try the .lrc file sitting next to the music file
+          const lrcPath = join(
+            dirname(path),
+            basename(path, extname(path)) + ".lrc"
+          );
+          const lrcContent = await readFile(lrcPath, "utf8");
           return {
-            content: lyrics,
+            content: lrcContent,
             contentType: "text/plain",
           };
         } catch {
+          // NCM accepts everything, must return with hard error
           throw new NetworkError("No lyrics");
         }
       }
