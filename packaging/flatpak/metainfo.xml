@@ -62,6 +62,27 @@
   </screenshots>
 
   <releases>
+    <release version="0.16.2" date="2026-08-05">
+      <url type="details">https://github.com/YUCLing/open-orpheus/releases/tag/v0.16.2</url>
+      <description>
+        <ul>
+          <li>Fixed desktop lyrics being difficult to resize.</li>
+          <li xml:lang="zh-CN">修复桌面歌词难以调整大小。</li>
+          <li>Fixed lyrics progression speed potentially out of sync with actual playback speed.</li>
+          <li xml:lang="zh-CN">修复歌词推进速度可能与实际播放速度不一致。</li>
+          <li>Simplified font list retrieval.</li>
+          <li xml:lang="zh-CN">简化字体列表获取。</li>
+          <li>Improved filtering to better select fonts with good Simplified Chinese text support.</li>
+          <li xml:lang="zh-CN">更好地过滤出较好支持简体文本的字体。</li>
+          <li>Calculate lyrics progress using relative width.</li>
+          <li xml:lang="zh-CN">使用相对宽度计算歌词进度。</li>
+          <li>Attempt to find more lyrics for local music.</li>
+          <li xml:lang="zh-CN">尝试为本地音乐找到更多歌词。</li>
+          <li>Updated dependencies and Electron.</li>
+          <li xml:lang="zh-CN">更新依赖和 Electron。</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.16.1" date="2026-07-30">
       <url type="details">https://github.com/YUCLing/open-orpheus/releases/tag/v0.16.1</url>
       <description>
