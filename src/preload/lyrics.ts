@@ -16,3 +16,7 @@ HALTED_EVENTS.forEach((e) => {
 player.audio.addEventListener("timeupdate", () => {
   ipcRenderer.send("lyrics.setTime", player.audio.currentTime);
 });
+
+player.audio.addEventListener("ratechange", () => {
+  ipcRenderer.send("lyrics.setPlaybackRate", player.audio.playbackRate);
+});

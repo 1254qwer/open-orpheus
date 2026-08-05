@@ -15,4 +15,8 @@ lifecycleEvents.on("mainwindowcreated", (e) => {
   mainWindow.webContents.ipc.on("lyrics.setTime", (event, time) => {
     lyricsDispatcher.time = time;
   });
+
+  mainWindow.webContents.ipc.on("lyrics.setPlaybackRate", (event, rate) => {
+    lyricsDispatcher.playbackRate = rate;
+  });
 });

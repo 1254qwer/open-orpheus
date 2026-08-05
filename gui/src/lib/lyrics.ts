@@ -10,7 +10,7 @@ export type LyricsBridgeEvents = {
   sloganupdate: string | null;
   playstateupdate: boolean;
   timeupdate: number;
-  raf: { time: number; playState: boolean };
+  raf: { time: number; playState: boolean; playbackRate: number };
 };
 
 const emitter = new Emittery<LyricsBridgeEvents>();
@@ -28,6 +28,7 @@ let lyrics: LyricsStore | null = null;
 let slogan: string | null = null;
 let playState = false;
 let time = 0;
+let playbackRate = 1;
 
 let lastTimeUpdate: number | null = null;
 let rafId: number | null = null;
@@ -49,7 +50,7 @@ api.events.playStateUpdate((state) => {
     // Paused, stopped... or anything else, we simply make sure we are providing
     // the latest time available if timeupdate was not updated when it stops.
     const diff = lastTimeUpdate ? performance.now() - lastTimeUpdate : 0;
-    time += diff / 1000;
+    time += (diff / 1000) * playbackRate;
     // Clears the lastTimeUpdate to ensure it won't get applied when it restarts
     lastTimeUpdate = null;
   }
@@ -60,12 +61,22 @@ api.events.timeUpdate((newTime) => {
   time = newTime;
   emitter.emit("timeupdate", newTime);
 });
+api.events.playbackRateUpdate((rate) => {
+  // Settle elapsed time at the old rate before switching,
+  // so getTime() doesn't apply the new rate to the entire interval.
+  if (playState && lastTimeUpdate) {
+    const diff = performance.now() - lastTimeUpdate;
+    time += (diff / 1000) * playbackRate;
+    lastTimeUpdate = performance.now();
+  }
+  playbackRate = rate;
+});
 
 api.requestFullUpdate();
 
 function onRAF() {
   rafId = requestAnimationFrame(onRAF);
-  emitter.emit("raf", { time: getTime(), playState });
+  emitter.emit("raf", { time: getTime(), playState, playbackRate });
 }
 
 function setRAFEnabled(enabled: boolean) {
@@ -94,5 +105,5 @@ export function getPlayState() {
 export function getTime() {
   if (!playState || !lastTimeUpdate) return time;
   const diff = performance.now() - lastTimeUpdate;
-  return time + diff / 1000;
+  return time + (diff / 1000) * playbackRate;
 }
