@@ -1,7 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig } from "vite";
-import { version } from "../package.json";
+import { version } from "../package.json" with { type: "json" };
 
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],

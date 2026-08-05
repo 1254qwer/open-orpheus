@@ -31,3 +31,6 @@ overrides:
   "@keyv/sqlite>sqlite3": "-"
   # Safe to upgrade (no actual breaking changes for this project)
   "@electron-forge/plugin-fuses>@electron/fuses": "catalog:"
+minimumReleaseAgeExclude:
+  # I believe electron's releases are very trustable
+  - electron
