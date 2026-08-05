@@ -12,6 +12,10 @@ export function registerLyricsHandlers(wnd: Electron.BrowserWindow) {
         lyricsDispatcher.playState
       );
       wnd.webContents.send("lyrics.timeUpdate", lyricsDispatcher.time);
+      wnd.webContents.send(
+        "lyrics.playbackRateUpdate",
+        lyricsDispatcher.playbackRate
+      );
     },
   });
 
@@ -30,11 +34,18 @@ export function registerLyricsHandlers(wnd: Electron.BrowserWindow) {
   const unlistenTimeUpdate = lyricsDispatcher.on("timeupdate", (e) => {
     wnd.webContents.send("lyrics.timeUpdate", e.data);
   });
+  const unlistenPlaybackRateUpdate = lyricsDispatcher.on(
+    "playbackrateupdate",
+    (e) => {
+      wnd.webContents.send("lyrics.playbackRateUpdate", e.data);
+    }
+  );
 
   wnd.on("closed", () => {
     unlistenLyricsUpdate();
     unlistenSloganUpdate();
     unlistenPlayStateUpdate();
     unlistenTimeUpdate();
+    unlistenPlaybackRateUpdate();
   });
 }

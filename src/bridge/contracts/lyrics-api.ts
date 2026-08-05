@@ -6,6 +6,7 @@ export interface LyricsContract {
     sloganUpdate(callback: (slogan: string | null) => void): void;
     playStateUpdate(callback: (state: boolean) => void): void;
     timeUpdate(callback: (time: number) => void): void;
+    playbackRateUpdate(callback: (rate: number) => void): void;
   };
   requestFullUpdate(): Promise<void>;
 }
