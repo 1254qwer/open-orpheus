@@ -84,6 +84,16 @@ dnf install open-orpheus # 安装
 
 https://aur.archlinux.org/packages/open-orpheus
 
+### Gentoo
+
+可通过 Gentoo-zh Overlay 安装
+
+```sh
+eselect repository enable gentoo-zh # 启用 Gentoo-zh Overlay
+emerge --sync gentoo-zh # 同步刚启用的 Gentoo-zh Overlay
+emerge --ask media-sound/open-orpheus-bin # 安装
+```
+
 ### Debian Linux、Flatpak、AppImage、Windows、macOS
 
 前往 [Releases](https://github.com/YUCLing/open-orpheus/releases/latest) 下载
