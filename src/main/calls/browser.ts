@@ -88,7 +88,10 @@ registerCallHandler<[SetCookie], [boolean]>(
         sameSite: cookie.samesite,
       });
     } catch (error) {
-      console.error(`Error setting cookie:`, error);
+      LOGGER.error(
+        { cookie: cookie.Name, err: error },
+        "Failed to set cookie: %s"
+      );
       return [false];
     }
     return [true];

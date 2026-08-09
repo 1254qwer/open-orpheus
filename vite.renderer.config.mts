@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 import { onExit } from "@open-orpheus/lifecycle";
 
-const GUI_DIR = resolve(__dirname, "gui");
+const GUI_DIR = resolve(import.meta.dirname, "gui");
 // Port for the SvelteKit dev server spawned alongside the dummy Vite dev server.
 const SVELTEKIT_DEV_PORT = 5174;
 

@@ -45,6 +45,7 @@ import createCacheManager, {
 } from "../cache";
 import { toError } from "../../util";
 import { commentToID3Json, ID3JsonToComment } from "../id3";
+import globalLogger from "../logger";
 
 type DownloadScannerItem = {
   comment: string; // comment added by addid3
@@ -69,7 +70,10 @@ async function readDownloadedMusicInfo(
 
     comment = json;
   } catch (error) {
-    console.error(`Error reading ID3 tags from ${filePath}:`, error);
+    globalLogger.error(
+      { name: "music-info-reader", file: filePath, err: error },
+      "Error reading ID3 tags"
+    );
     return;
   }
   const statResult = await stat(filePath);
@@ -138,11 +142,11 @@ registerCallHandler<[string, string, string], [string, string]>(
         }
       );
       watcher.on("error", (err) => {
-        console.error("Download dir watcher encountered error", err);
+        LOGGER.error({ err }, "Download directory watcher encountered error");
       });
       downloadDirWatcher = watcher;
     } catch (err) {
-      console.error("Cannot monitor download dir", err);
+      LOGGER.error({ err: toError(err) }, "Cannot monitor download dir");
     }
 
     return [downloadDir, cacheDir];
@@ -189,7 +193,7 @@ registerCallHandler<[string, string], void>(
         ...execResult
       );
     } catch (error) {
-      console.error(`Error executing SQL:`, error);
+      LOGGER.error({ sql, err: error }, "Error executing SQL");
       event.sender.send(
         "channel.call",
         "storage.onexecsqldone",
@@ -214,7 +218,7 @@ registerCallHandler<[string, string], void>(
         ...execResult
       );
     } catch (error) {
-      console.error(`Error executing SQL transaction:`, error);
+      LOGGER.error({ sql, err: error }, "Error executing SQL transaction: %s");
       event.sender.send(
         "channel.call",
         "storage.onexecsqldone",
@@ -295,7 +299,7 @@ registerCallHandler<[string, "abs" | "rel", "", string, boolean], void>(
         );
         return;
       }
-      console.error("Failed to delete file", err);
+      LOGGER.error({ file: filePath, err }, "Failed to delete file");
       event.sender.send(
         "channel.call",
         "storage.ondeletefilesdone",
@@ -375,7 +379,7 @@ registerCallHandler<[string, boolean, string, number, string[]], void>(
 
         flush();
       } catch (err) {
-        console.error(`DownloadScanner: scanner path ${path}:`, err);
+        LOGGER.error({ path, err }, "Error when scanning downloads");
       }
     })();
   }
@@ -445,7 +449,7 @@ registerCallHandler<[string], void>(
     try {
       content = (await lyricCacheManager?.get(songId)) ?? "";
     } catch (error) {
-      console.error(`Error reading temp file for songId ${songId}:`, error);
+      LOGGER.error({ songId, err: error }, "Error reading temp file");
     }
     event.sender.send(
       "channel.call",
@@ -463,14 +467,14 @@ registerCallHandler<[string, string, string], void>(
     if (!lyricCacheManager) return;
 
     if (type !== "text/plain") {
-      console.error(`Unsupported temp file type: ${type}`);
+      LOGGER.error({ type }, "Unsupported temp file type");
       return;
     }
 
     try {
       await lyricCacheManager.set(songId, content);
     } catch (error) {
-      console.error(`Error writing temp file for songId ${songId}:`, error);
+      LOGGER.error({ songId, err: error }, "Error writing temp file");
     }
   }
 );
@@ -518,7 +522,7 @@ registerCallHandler<[string, "abs" | "rel", "", string], void>(
         );
       })
       .catch((error) => {
-        console.error(`Error listing files in ${filePath}: ${error.message}`);
+        LOGGER.error({ path: filePath }, "Error listing files: %s", error);
         // TODO: Some error code?
         event.sender.send("channel.call", "storage.onlistfile", taskId, 1, []);
       });
@@ -580,7 +584,10 @@ registerCallHandler<
               const imageData = await readFile(imageFullPath);
               taggedFile.pictures = [new MetaPicture(mimeType, imageData)];
             } catch (err) {
-              console.error("Failed to insert cover art to media file", err);
+              LOGGER.error(
+                { err: toError(err), mediaPath, imagePath: imageFullPath },
+                "Failed to insert cover art to media file"
+              );
             }
           }
         }
@@ -611,7 +618,7 @@ registerCallHandler<
         relPath
       );
     })().catch((err) => {
-      console.error("Failed to write ID3 tag", err);
+      LOGGER.error({ err: toError(err) }, "Failed to write ID3 tag");
       event.sender.send("channel.call", "storage.onaddid3done", taskId, 0);
     });
   }
@@ -624,7 +631,10 @@ async function handleFileBatch(
   destPaths: string[]
 ) {
   if (srcPaths.length !== destPaths.length) {
-    console.error("src and dest paths length mismatch");
+    LOGGER.error(
+      { type, srcPaths, destPaths },
+      "Mismatch srcPaths and destPaths"
+    );
     return;
   }
 
@@ -662,7 +672,7 @@ async function handleFileBatch(
       })
     );
   } catch (error) {
-    console.error(`Error when ${type} files:`, error);
+    LOGGER.error({ type, err: error }, "Error when doing batch file ops");
     event.sender.send("channel.call", `storage.on${type}process`, {
       code: 1,
       state: srcPaths.length - processedCount,
@@ -689,8 +699,9 @@ registerCallHandler<["copy", "abs", "", string[], "abs", "", string[]], void>(
     destPaths
   ) => {
     if (type !== "copy" || srcType !== "abs" || destType !== "abs") {
-      console.error(
-        `Unsupported file operation type: ${type} with srcType: ${srcType} and destType: ${destType}`
+      LOGGER.error(
+        { type, srcType, destType },
+        "Unsupported file operation type"
       );
       return;
     }
@@ -712,8 +723,9 @@ registerCallHandler<["move", "abs", "", string[], "abs", "", string[]], void>(
     destPaths
   ) => {
     if (type !== "move" || srcType !== "abs" || destType !== "abs") {
-      console.error(
-        `Unsupported file operation type: ${type} with srcType: ${srcType} and destType: ${destType}`
+      LOGGER.error(
+        { type, srcType, destType },
+        "Unsupported file operation type"
       );
       return;
     }

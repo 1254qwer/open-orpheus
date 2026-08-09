@@ -3,23 +3,9 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vite";
 
-// unzipper has a dependency on @aws-sdk/client-s3, which is not needed in
-// our context and causes build issues. This plugin mocks it out.
-function NoS3Plugin() {
-  return {
-    name: "no-s3",
-    resolveId(id: string) {
-      if (id === "@aws-sdk/client-s3") {
-        return id; // Mark as resolved but empty
-      }
-    },
-    load(id: string) {
-      if (id === "@aws-sdk/client-s3") {
-        return "export default {}"; // Provide an empty module
-      }
-    },
-  };
-}
+import PinoWorkerPlugin from "./plugins/PinoWorkerPlugin.mjs";
+import NoS3Plugin from "./plugins/NoS3Plugin.mjs";
+import LoggerPlugin from "./plugins/LoggerPlugin.mjs";
 
 // https://vitejs.dev/config
 export default defineConfig({
@@ -48,5 +34,7 @@ export default defineConfig({
       ],
     },
   },
-  plugins: [NoS3Plugin()],
+  // unzipper has a dependency on @aws-sdk/client-s3, which is not needed in
+  // our context and causes build issues. This plugin mocks it out.
+  plugins: [NoS3Plugin(), PinoWorkerPlugin(), LoggerPlugin()],
 });

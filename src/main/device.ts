@@ -53,9 +53,9 @@ export async function prepareDeviceId() {
     }
   } catch (e) {
     if (!isFileNotFound(e))
-      console.error(
-        "Failed to read device ID from file, generating new ones.",
-        e
+      LOGGER.warn(
+        { err: e },
+        "Failed to read device ID from file, generating new ones."
       );
   }
   // Generate a legal host MAC address: unicast and universally administered.
@@ -83,6 +83,6 @@ export async function prepareDeviceId() {
       "utf-8"
     );
   } catch (e) {
-    console.error("Failed to write device ID to file.", e);
+    LOGGER.warn("Failed to write device ID to file: %s", e);
   }
 }

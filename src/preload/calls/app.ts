@@ -88,7 +88,10 @@ if (isMain) {
     "app.systemVoiceHint",
     async (voice) => {
       if (voice.pathtype !== "resource") {
-        console.warn("Unsupported voice hint type", voice.pathtype);
+        LOGGER.warn(
+          { pathtype: voice.pathtype },
+          "Unsupported voice hint type"
+        );
         return;
       }
 

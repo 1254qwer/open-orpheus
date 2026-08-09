@@ -7,6 +7,9 @@ import { app, dialog, Menu, protocol, session } from "electron";
 
 import started from "electron-squirrel-startup";
 
+// Setup logger as early as possible
+import logger from "./main/logger";
+
 // We want to hook Wayland connections as early as possible.
 import "@open-orpheus/window";
 
@@ -147,7 +150,7 @@ app.on("ready", async () => {
       await packManager.loadWebPack();
     } catch (e) {
       if (!(e instanceof Error) || e.message !== "REDOWNLOAD_REQ")
-        console.warn("Failed to load web pack:", e);
+        logger.error({ name: "loader" }, "%s", e);
       await showPackgeDownloadWindow(); // If user cancelled, this will throw and skip the rest of initialization
       if (shouldRedownload) {
         // Redownload is successfully here, drop the argument then restart again
@@ -208,7 +211,10 @@ app.on("ready", async () => {
         // This will be done in the background, the OnlineStreamer will know what files are
         // currently being used, cleanup will only clean the leftovers from previous usages.
         m.OnlineStreamer.cleanup().catch((e) => {
-          console.error("Failed to cleanup OnlineStreamer temporary files:", e);
+          logger.error(
+            { name: "loader", err: toError(e) },
+            `Failed to cleanup OnlineStreamer temporary files`
+          );
         });
       }),
       (async () => {
@@ -220,12 +226,18 @@ app.on("ready", async () => {
               force: true,
               recursive: true,
             }).catch((e) =>
-              console.error("Failed to delete download temp file", entry, e)
+              logger.error(
+                { name: "loader", err: toError(e), file: entry },
+                `Failed to delete download temporary file`
+              )
             );
           }
         } catch (err) {
           if (isFileNotFound(err)) return;
-          console.error("Failed to cleanup download temp", err);
+          logger.error(
+            { name: "loader", err: toError(err) },
+            `Failed to cleanup download temp`
+          );
         }
       })(),
       import("./main/afp"),
@@ -271,7 +283,11 @@ app.on("ready", async () => {
           const agents = await m.getProxyAgent(cfg);
           m.setProxy(agents);
         } catch (err) {
-          console.warn("Failed to get proxy configuration", err);
+          logger.warn(
+            { name: "proxy" },
+            "Failed to load proxy configuration: %s",
+            err
+          );
         }
       }),
       prepareDeviceId().then(async () => {

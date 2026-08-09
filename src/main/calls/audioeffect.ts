@@ -18,7 +18,7 @@ registerCallHandler<
     return [{ data: effect.payload as string }];
   } catch (e) {
     const err = toError(e);
-    console.error("Failed to get audio effect params:", err);
+    LOGGER.error({ err }, "Failed to get audio effect params");
     return [{ errorCode: 2, errorMsg: err.message }];
   }
 });

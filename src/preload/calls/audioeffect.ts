@@ -4,7 +4,7 @@ import { Ncae, NcaeType } from "$sharedTypes/ncae";
 
 import { player } from "../audioplayer";
 import { registerCallHandler } from "../calls";
-import { dbToGain } from "../../util";
+import { dbToGain, toError } from "../../util";
 
 type EqualizerData = {
   /** 10-band graphic equalizer. */
@@ -287,7 +287,7 @@ function applyEqualizer(eq: string | null = null) {
     );
   } catch (err) {
     if (err !== "DISABLE_EQ")
-      console.error("Failed to apply audio effect", err);
+      LOGGER.error({ err: toError(err) }, `Failed to apply audio effect`);
     m.setEqualizers(null);
     m.setBass(0);
     m.setTreble(0);

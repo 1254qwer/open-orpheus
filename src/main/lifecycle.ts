@@ -1,6 +1,8 @@
 import { BrowserWindow } from "electron";
 import Emittery from "emittery";
 
+import { toError } from "../util";
+
 export enum LifecycleState {
   Starting,
   MainWindowCreated,
@@ -61,5 +63,7 @@ export function setLifecycleState<K extends LifecycleState>(
       event as keyof LifecycleEvents,
       args[0] as LifecycleEvents[keyof LifecycleEvents]
     )
-    .catch(console.error);
+    .catch((e) => {
+      LOGGER.error({ err: toError(e) }, `Lifecycle event emit error`);
+    });
 }

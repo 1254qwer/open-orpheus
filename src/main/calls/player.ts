@@ -313,9 +313,9 @@ registerCallHandler<[string, string], [boolean]>(
     // This call must be returned AFTER result is called.
     const filePath = sanitizeRelativePath(storageDir, path);
     if (filePath === false) {
-      console.warn(
-        "Attempted to save desktop lyrics preview to invalid path:",
-        path
+      LOGGER.warn(
+        { path },
+        "Attempted to save desktop lyrics preview to invalid path"
       );
       return [false];
     }

@@ -177,7 +177,7 @@ registerCallHandler<[string, string[]], [boolean]>(
         ...result,
       });
     } catch (error) {
-      console.error(`Error executing music library SQL: ${error}`);
+      LOGGER.error({ sql }, "Error executing music library SQL: %s", error);
       event.sender.send("channel.call", "musiclibrary.onexecsql", {
         error: 1,
         id: taskId,
@@ -219,12 +219,9 @@ registerCallHandler<[MusicLibraries], void>(
             );
           } catch (err) {
             if (!isFileNotFound(err))
-              console.error(
-                "Failed to refresh music",
-                filename,
-                "metadata in library",
-                lib,
-                err
+              LOGGER.error(
+                { filename, library: lib, err: toError(err) },
+                "Failed to refresh music metadata in library"
               );
           }
           event.sender.send("channel.call", "musiclibrary.onobserveLibrary", {
@@ -233,12 +230,15 @@ registerCallHandler<[MusicLibraries], void>(
         }
       );
       watcher.on("error", (err) => {
-        console.error("Library observer encountered error:", err);
+        LOGGER.error({ err }, "Library observer encountered error");
       });
       libWatchers.set(lib, watcher);
     } catch (err) {
       if (!isFileNotFound(err))
-        console.error("Cannot monitor music library", lib, err);
+        LOGGER.error(
+          { library: lib, err: toError(err) },
+          "Cannot monitor music library"
+        );
     }
   }
 );
@@ -334,12 +334,9 @@ registerCallHandler<[MusicLibraries, number], [boolean]>(
               );
             }
           } catch (err) {
-            console.error(
-              "Failed to read music",
-              relative,
-              "in library",
-              library,
-              err
+            LOGGER.error(
+              { filename: relative, library, err: toError(err) },
+              "Failed to read music in library"
             );
           }
         }
@@ -357,7 +354,7 @@ registerCallHandler<[MusicLibraries, number], [boolean]>(
           result: 0,
         });
       } catch (err) {
-        console.error("Failed to add music library:", err);
+        LOGGER.error({ err: toError(err) }, "Failed to add music library");
         event.sender.send("channel.call", "musiclibrary.onaddend", {
           dirs: undefined,
           library,
@@ -379,7 +376,10 @@ registerCallHandler<[string], [boolean]>(
         const db = musicLibraryDb;
         await db.exec("DELETE FROM track WHERE dir = ?", [library]);
       } catch (err) {
-        console.error("Failed to delete tracks from lib", library, err);
+        LOGGER.error(
+          { library, err: toError(err) },
+          "Failed to delete tracks from library"
+        );
       }
       event.sender.send(
         "channel.call",

@@ -20,9 +20,23 @@ import { client, getProxyAgent } from "../request";
 import { disableHardwareAccelerationFlag } from "../folders";
 import { LifecycleState, setLifecycleState } from "../lifecycle";
 import { DawnEntry, setStatisEndpoint, statisV2 } from "../dawn";
+import globalLogger from "../logger";
 
 registerCallHandler<string[], void>("app.log", (_ev, ...args) => {
-  console.log(...args);
+  const raw = args.map((v) => String(v)).join(" ");
+  // Format: `[2026-08-09 10:35:57] 【persistentState】,"...","..."`
+  // Strip the timestamp, extract the module name from 【】, drop a leading
+  // comma after it (if present), and log the rest.
+  const match = raw.match(
+    /^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]\s*【([^】]+)】\s*,?\s*(.*)$/
+  );
+  globalLogger.info(
+    {
+      name: "app",
+      ...(match && { module: match[1] }),
+    },
+    match ? match[2] : raw
+  );
 });
 
 registerCallHandler<["dawn", DawnEntry[]], void>(
@@ -268,7 +282,7 @@ registerCallHandler<[string, string], [boolean]>(
       await packManager.loadSkinPack(name, name2);
       return [true];
     } catch (e) {
-      console.error("Failed to load skin pack", e);
+      LOGGER.error({ packs: [name, name2] }, "Failed to load skin pack: %s", e);
     }
     return [false];
   }
@@ -553,7 +567,7 @@ registerCallHandler<[string], [boolean]>(
         return [result.openAtLogin];
       }
       default:
-        console.warn("Unsupported app", appName, "for getting autorun");
+        LOGGER.warn({ appName }, "Unsupported app name for getting autorun");
         return [false];
     }
   }
@@ -587,7 +601,7 @@ registerCallHandler<[string, "autorun"], [boolean]>(
         return [true];
       }
       default:
-        console.warn("Unsupported app", appName, "for setting autorun");
+        LOGGER.warn({ appName }, "Unsupported app name for setting autorun");
         return [false];
     }
   }
@@ -610,7 +624,7 @@ registerCallHandler<[string], [boolean]>(
         return [true];
       }
       default:
-        console.warn("Unsupported app", appName, "for cancelling autorun");
+        LOGGER.warn({ appName }, "Unsupported app name for cancelling autorun");
         return [false];
     }
   }

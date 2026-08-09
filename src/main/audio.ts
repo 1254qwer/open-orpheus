@@ -90,7 +90,11 @@ export default function registerAudioStreamerScheme(protocol: Protocol) {
             },
           });
         } catch (e) {
-          console.error("Failed to load worklet", e);
+          LOGGER.debug(
+            { scheme: "audio", path: workletPath },
+            "Failed to get worklet: %s",
+            e
+          );
           return new Response("Failed to load worklet", { status: 500 });
         }
       }
@@ -205,7 +209,10 @@ lifecycleEvents.on("mainwindowcreated", (e) => {
       try {
         return await readEffect(pathInfo);
       } catch (err) {
-        console.error(err);
+        LOGGER.error(
+          { err: toError(err), pathInfo },
+          `Failed to read audio effect`
+        );
         return null;
       }
     }
@@ -217,7 +224,10 @@ lifecycleEvents.on("mainwindowcreated", (e) => {
       if (state?.type === AudioType.URL) {
         // We don't await this, let it destroy in background
         state.streamer.destroy().catch((e) => {
-          console.error("Failed to destroy previous OnlineStreamer", e);
+          LOGGER.error(
+            { err: toError(e) },
+            `Failed to destroy previous OnlineStreamer`
+          );
         });
       }
       state = null;
@@ -253,15 +263,15 @@ lifecycleEvents.on("mainwindowcreated", (e) => {
                 fileSize: buf.length,
               })
               .catch((err) => {
-                console.error("[PlayCacheManager] Failed to cache track:", err);
+                LOGGER.error({ err: toError(err) }, `Failed to cache track`);
               });
           } catch (e) {
-            console.log("Cannot get streamed track:", e);
+            LOGGER.error({ err: toError(e) }, `Cannot get streamed track`);
           }
         });
 
         streamer.on("error", (e) => {
-          console.log("OnlineStreamer error:", e.data);
+          LOGGER.error({ err: e.data }, `OnlineStreamer errored`);
         });
 
         state = {

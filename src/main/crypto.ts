@@ -56,7 +56,7 @@ export function enData(
   doubleBase64 = true
 ) {
   if (!Buffer.isBuffer(key) || key.length !== 0x10) {
-    console.error("Error: enData: AES_set_encrypt_key error!");
+    LOGGER.error({ algo: "enData" }, "Invalid input key: %s", key);
     return null;
   }
   // No IV in ECB mode
@@ -88,7 +88,7 @@ export function deData(
   doubleBase64 = true
 ): Buffer | null {
   if (!Buffer.isBuffer(key) || key.length !== 0x10) {
-    console.error("Error: deData: invalid key length, expected 16 bytes");
+    LOGGER.error({ algo: "deData" }, "Invalid input key: %s", key);
     return null;
   }
 
@@ -103,7 +103,10 @@ export function deData(
     ciphertext = Buffer.from(ciphertext.toString("utf8"), "base64");
 
   if (ciphertext.length === 0 || ciphertext.length % 16 !== 0) {
-    console.error("Error: deData: ciphertext length is not a multiple of 16");
+    LOGGER.error(
+      { algo: "deData", ciphertext },
+      "Ciphertext length is not a multiple of 16"
+    );
     return null;
   }
 

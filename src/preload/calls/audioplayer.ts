@@ -3,6 +3,7 @@ import { player } from "../audioplayer";
 import { registerCallHandler } from "../calls";
 import { fireNativeCall } from "../channel";
 import { AudioPlayInfo } from "../Player";
+import { toError } from "../../util";
 
 registerCallHandler<[string, AudioPlayInfo], void>(
   "audioplayer.load",
@@ -56,6 +57,7 @@ registerCallHandler<[number], void>("audioplayer.setPlaybackRate", (rate) => {
 // TODO: What's this?
 registerCallHandler<object[], void>("audioplayer.setAudioStrategy", () => {
   console.warn("audioplayer.setAudioStrategy is not implemented yet.");
+  LOGGER.warn("Call is not yet implemented");
 });
 
 // TODO: Implement this properly
@@ -121,7 +123,10 @@ registerCallHandler<[number], void>(
     try {
       await player.setAudioDataEnabled(enable === 1);
     } catch (err) {
-      console.error("Failed to change audio data capture state:", err);
+      LOGGER.error(
+        { err: toError(err) },
+        `Failed to change audio data capture state`
+      );
     }
   }
 );
