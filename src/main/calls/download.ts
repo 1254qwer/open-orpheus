@@ -54,7 +54,11 @@ registerCallHandler<[DownloadStartRequest], void>(
       try {
         headers = JSON.parse(ext_header);
       } catch (error) {
-        console.error("Failed to parse ext_header JSON:", error);
+        LOGGER.error(
+          { json: ext_header },
+          "Failed to parse ext_header: %s",
+          error
+        );
       }
     }
 
@@ -106,7 +110,7 @@ registerCallHandler<[DownloadStartRequest], void>(
     });
 
     task.on("error", (e) => {
-      console.error(`Download error for id ${id}:`, e.data);
+      LOGGER.error({ id, err: e.data }, "Download errored");
       event.sender.send("channel.call", "download.onprocess", id, {
         down: 0,
         islast: true,

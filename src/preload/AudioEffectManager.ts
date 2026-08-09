@@ -1,4 +1,4 @@
-import { dbToGain } from "../util";
+import { dbToGain, toError } from "../util";
 
 /** 10-band graphic EQ frequencies (fixed, octave-spaced) */
 const EQ_FREQUENCIES = [31, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
@@ -231,7 +231,10 @@ export default class AudioEffectManager {
         active: false,
       });
     } catch (err) {
-      console.error("Failed to load audio-effect worklet:", err);
+      LOGGER.error(
+        { err: toError(err) },
+        "Failed to load audio-effect worklet"
+      );
       // Non-fatal: audio still works without advanced effects.
     }
   }
@@ -421,7 +424,7 @@ export default class AudioEffectManager {
       this.setSlotActive("convolver", true);
     } catch (err) {
       if (serial !== this.convolverLoadSerial) return;
-      console.error("Failed to decode convolution IR:", err);
+      LOGGER.error({ err: toError(err) }, "Failed to decode convolution IR");
       this.clearConvolutionIR();
     }
   }

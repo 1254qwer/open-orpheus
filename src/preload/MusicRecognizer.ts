@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron";
 import Emittery from "emittery";
+import { toError } from "../util";
 
 async function getDesktopAudioStream() {
   // Since getDisplayMedia() requires a video track, if this option is set to false the promise will reject with a TypeError.
@@ -203,7 +204,7 @@ export default class MusicRecognizer extends Emittery<MusicRecognizerEvents> {
         hasMatch = true;
       }
     } catch (e) {
-      console.error(e);
+      LOGGER.error({ err: toError(e) }, `Music recognizing error`);
       code = -101;
     }
 
@@ -222,7 +223,7 @@ export default class MusicRecognizer extends Emittery<MusicRecognizerEvents> {
 
   private fail(state: RecognitionState, err: unknown) {
     if (this.state !== state) return;
-    console.error(err);
+    LOGGER.error({ err: toError(err) }, `MusicRecognizer failed`);
 
     this.finish(state, {
       code: -100,
@@ -240,7 +241,13 @@ export default class MusicRecognizer extends Emittery<MusicRecognizerEvents> {
     result: MusicRecognizeResult | null = null
   ) {
     if (this.state !== state) return;
-    if (result) void this.emit("result", result).catch(console.error);
+    if (result)
+      void this.emit("result", result).catch((err) => {
+        LOGGER.error(
+          { err: toError(err) },
+          `MusicRecognizer errored when emitting the result`
+        );
+      });
     this.cleanup(state);
     this.state = null;
     state.resolveDone(result);
@@ -256,7 +263,7 @@ export default class MusicRecognizer extends Emittery<MusicRecognizerEvents> {
       state.stream?.getTracks().forEach((track) => track.stop());
       void state.ctx?.close();
     } catch (err) {
-      console.error(err);
+      LOGGER.error({ err: toError(err) }, `Failed to finish cleanup`);
     }
 
     state.recorder = null;

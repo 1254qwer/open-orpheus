@@ -68,6 +68,7 @@ contextBridge.exposeInMainWorld("channel", {
         ...params
       );
       if (result === false) {
+        LOGGER.warn({ command, params }, `Unimplemented call command`);
         console.warn(
           `Unimplemented call command:`,
           command,

@@ -1,6 +1,7 @@
 import { ipcRenderer } from "electron";
 import { fireNativeCall } from "./channel";
 import Player, { AudioPlayerState } from "./Player";
+import { toError } from "../util";
 
 export const PLAYING_EVENTS = ["play", "playing"];
 export const HALTED_EVENTS = ["pause", "stalled", "ended", "error"];
@@ -12,7 +13,7 @@ ipcRenderer.invoke("audio.getDevice").then((deviceId) => {
     (player.audioContext as unknown as HTMLAudioElement)
       .setSinkId(deviceId)
       .catch((e) => {
-        console.error("Failed to set audio output device:", e);
+        LOGGER.error({ err: toError(e) }, `Failed to set audio output device`);
       });
   }
 });

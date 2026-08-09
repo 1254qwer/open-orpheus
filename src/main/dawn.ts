@@ -7,6 +7,7 @@ const zstdCompress = promisify(zstdCompressCb);
 import { getCookies } from "./cookie";
 import { client as httpClient } from "./request";
 import { chacha20Encrypt, rawRsaEncrypt } from "./crypto";
+import { toError } from "../util";
 
 const PID = process.pid;
 const FIELD_SEP = "\x01";
@@ -163,8 +164,12 @@ async function flushToBundle(): Promise<void> {
   while (pendingBundles.length > MAX_PENDING_BUNDLES) {
     const dropped = pendingBundles.shift();
     if (dropped) {
-      console.warn(
-        `[dawn] Dropped oldest bundle: ${dropped.filename} — queue at ${pendingBundles.length + 1}/${MAX_PENDING_BUNDLES}`
+      LOGGER.warn(
+        {
+          filename: dropped.filename,
+          queue: `${pendingBundles.length + 1}/${MAX_PENDING_BUNDLES}`,
+        },
+        `Dropped oldest bundle`
       );
     }
   }
@@ -213,9 +218,7 @@ async function uploadBundles(): Promise<void> {
         });
 
         if (r.statusCode !== 200) {
-          console.error(
-            `[dawn] Upload failed: ${filename} — HTTP ${r.statusCode}`
-          );
+          LOGGER.error({ filename, statusCode: r.statusCode }, `Upload failed`);
           continue;
         }
 
@@ -223,7 +226,7 @@ async function uploadBundles(): Promise<void> {
         try {
           res = JSON.parse(r.body);
         } catch {
-          console.error(`[dawn] Upload unparseable response: ${filename}`);
+          LOGGER.error({ filename }, `Upload unparseable response`);
           continue;
         }
 
@@ -231,12 +234,10 @@ async function uploadBundles(): Promise<void> {
           pendingBundles.splice(i, 1);
           i--; // compensate for removed element
         } else {
-          console.error(
-            `[dawn] Upload rejected: ${filename} — ${JSON.stringify(res)}`
-          );
+          LOGGER.error({ filename, response: res }, `Upload rejected`);
         }
       } catch (e) {
-        console.error(`[dawn] Upload error for ${filename}:`, e);
+        LOGGER.error({ filename, err: toError(e) }, `Upload error`);
       }
     }
   } finally {

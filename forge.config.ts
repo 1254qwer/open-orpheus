@@ -149,64 +149,64 @@ const config: ForgeConfig = {
         {
           // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
           entry: "src/main.ts",
-          config: "vite.main.config.ts",
+          config: "vite.main.config.mts",
           target: "main",
         },
         {
           entry: "src/preload.ts",
-          config: "vite.preload.config.ts",
+          config: "vite.preload.config.mts",
           target: "preload",
         },
         {
           entry: "src/windows/manage.ts",
-          config: "vite.preload.config.ts",
+          config: "vite.preload.config.mts",
           target: "preload",
         },
         {
           entry: "src/windows/package-download.ts",
-          config: "vite.preload.config.ts",
+          config: "vite.preload.config.mts",
           target: "preload",
         },
         {
           entry: "src/windows/desktop-lyrics.ts",
-          config: "vite.preload.config.ts",
+          config: "vite.preload.config.mts",
           target: "preload",
         },
         {
           entry: "src/windows/desktop-lyrics-preview.ts",
-          config: "vite.preload.config.ts",
+          config: "vite.preload.config.mts",
           target: "preload",
         },
         {
           entry: "src/windows/mini-player.ts",
-          config: "vite.preload.config.ts",
+          config: "vite.preload.config.mts",
           target: "preload",
         },
         {
           entry: "src/windows/menu.ts",
-          config: "vite.preload.config.ts",
+          config: "vite.preload.config.mts",
           target: "preload",
         },
         {
           entry: "src/worklets/pcm-honeypot.ts",
-          config: "vite.worklets.config.ts",
+          config: "vite.worklets.config.mts",
           target: "preload",
         },
         {
           entry: "src/worklets/music-recorder.ts",
-          config: "vite.worklets.config.ts",
+          config: "vite.worklets.config.mts",
           target: "preload",
         },
         {
           entry: "src/worklets/audio-effect.ts",
-          config: "vite.worklets.config.ts",
+          config: "vite.worklets.config.mts",
           target: "preload",
         },
       ],
       renderer: [
         {
           name: "gui",
-          config: "vite.renderer.config.ts",
+          config: "vite.renderer.config.mts",
         },
       ],
     }),

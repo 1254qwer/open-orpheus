@@ -329,12 +329,14 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
     void this.emit("progress", {
       loaded: this.tracker.loadedBytes,
       total: this.totalLength,
-    }).catch((error: unknown) => console.error(error));
+    }).catch((error: unknown) => LOGGER.error({ err: toError(error) }));
   }
 
   private emitComplete() {
     if (this._destroyed) return;
-    void this.emit("complete").catch((error: unknown) => console.error(error));
+    void this.emit("complete").catch((error: unknown) =>
+      LOGGER.error({ err: toError(error) })
+    );
   }
 
   private emitError(error: Error) {
@@ -343,7 +345,7 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
 
     this.emittedErrors.add(error);
     void this.emit("error", error).catch((emitError: unknown) =>
-      console.error(emitError)
+      LOGGER.error({ err: toError(emitError) })
     );
   }
 }

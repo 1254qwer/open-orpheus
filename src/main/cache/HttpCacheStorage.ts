@@ -3,6 +3,7 @@ import { Keyv } from "keyv";
 
 import { calculateDbSize } from "../util";
 import type { DatabaseSqliteDriver } from "../database/KeyvSqliteDriver";
+import { toError } from "../../util";
 
 export default class HttpCacheStorage extends Keyv {
   private driver: KeyvSqlite;
@@ -23,7 +24,7 @@ export default class HttpCacheStorage extends Keyv {
       if (now - lastVacuum <= 48 * 60 * 60 * 1000) return;
       await this.vacuum();
     })().catch((e) => {
-      console.error("Failed to run auto vaccum:", e);
+      LOGGER.error({ err: toError(e) }, "Failed to run auto vaccum");
     });
   }
 

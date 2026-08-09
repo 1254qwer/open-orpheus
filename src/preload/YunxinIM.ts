@@ -65,19 +65,14 @@ export default class YunxinIM extends EventTarget {
           resolve(data);
         },
         ondisconnect(data) {
-          console.warn("[YunxinIM] NIM disconnected:", data);
+          LOGGER.warn(`NIM disconnected: ${data}`);
         },
         onerror(data) {
-          console.warn("[YunxinIM] NIM error:", data);
+          LOGGER.error(`NIM error: ${data}`);
           reject(data);
         },
         onwillreconnect(data) {
-          console.warn(
-            "[YunxinIM] NIM will reconnect, retry:",
-            data.retryCount,
-            "duration:",
-            data.duration
-          );
+          LOGGER.info({ ...data }, `NIM will reconnect`);
         },
       });
     });
@@ -141,15 +136,10 @@ export default class YunxinIM extends EventTarget {
           resolve(data);
         },
         ondisconnect(data) {
-          console.warn("[YunxinIM] chatroom disconnected:", data.code);
+          LOGGER.warn(`Chatroom disconnected: ${data.code}`);
         },
         onwillreconnect(data) {
-          console.warn(
-            "[YunxinIM] chatroom reconnecting, retry:",
-            data.retryCount,
-            "duration:",
-            data.duration
-          );
+          LOGGER.info({ ...data }, "Chatroom will reconnect");
         },
         onmsgs: (msgs) => {
           for (const msg of msgs) {
