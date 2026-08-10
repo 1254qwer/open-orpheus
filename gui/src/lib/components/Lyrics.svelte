@@ -1,8 +1,25 @@
+<script lang="ts" module>
+  import type { Snippet } from "svelte";
+
+  export type ComponentLyricLine = Omit<LyricLine, "words"> & {
+    snippet: Snippet;
+  };
+</script>
+
 <script lang="ts">
   import type { HTMLAttributes } from "svelte/elements";
 
   import type { LyricLine } from "$sharedTypes/lyrics";
   import { LineMode, type LyricsStyle } from "$sharedTypes/desktop-lyrics";
+
+  type SupportedLyrics = (LyricLine | ComponentLyricLine)[];
+
+  type SupportedLine = LyricLine | ComponentLyricLine;
+
+  // Snippet-backed lines have no words; treat them like a normal line w/o per-word timing
+  function hasWords(line: SupportedLine): line is LyricLine {
+    return "words" in line;
+  }
 
   let {
     lyrics,
@@ -19,8 +36,8 @@
     lineattrs,
     ...rest
   }: {
-    lyrics: LyricLine[] | null;
-    secondaryLyrics?: LyricLine[] | null;
+    lyrics: SupportedLyrics | null;
+    secondaryLyrics?: SupportedLyrics | null;
     currentTime?: number;
     offset?: number;
     lyricStyle: LyricsStyle;
@@ -33,7 +50,7 @@
   } & HTMLAttributes<HTMLDivElement> = $props();
 
   // Binary search for the current line index
-  function findCurrentLineIndex(lines: LyricLine[], time: number): number {
+  function findCurrentLineIndex(lines: SupportedLyrics, time: number): number {
     if (lines.length === 0) return -1;
     let lo = 0;
     let hi = lines.length - 1;
@@ -52,19 +69,22 @@
 
   // Find a secondary line that overlaps with a given time
   function findSecondaryLine(
-    secondaryLines: LyricLine[] | null | undefined,
+    secondaryLines: SupportedLyrics | null | undefined,
     time: number
-  ): LyricLine | null {
+  ): SupportedLine | null {
     if (!secondaryLines || secondaryLines.length === 0) return null;
     const idx = findCurrentLineIndex(secondaryLines, time);
     if (idx < 0) return null;
     const line = secondaryLines[idx];
+    // Keep the last line visible even once its end_time has passed, so the
+    // final lyric/translation stays on screen after playback finishes.
+    if (idx === secondaryLines.length - 1) return line;
     if (time >= line.start_time && time < line.end_time) return line;
     return null;
   }
 
   // Compute per-line progress [0, 1]
-  function lineProgress(line: LyricLine, time: number): number {
+  function lineProgress(line: SupportedLine, time: number): number {
     const duration = line.end_time - line.start_time;
     if (duration <= 0) return time >= line.start_time ? 1 : 0;
     return Math.max(0, Math.min(1, (time - line.start_time) / duration));
@@ -83,7 +103,9 @@
 
   // Compute per-word progress: returns progress percentage for the whole line
   // considering individual word timings
-  function wordProgress(line: LyricLine, time: number): number {
+  function wordProgress(line: SupportedLine, time: number): number {
+    // Snippet-backed lines have no per-word timing; use whole-line progress
+    if (!hasWords(line)) return lineProgress(line, time);
     const words = line.words;
     if (words.length <= 1) return lineProgress(line, time);
 
@@ -322,7 +344,15 @@
     bind:this={containerEl}
     {...rest}
   >
-    {#snippet lyricLineContent(line: LyricLine, progress: number)}
+    {#snippet lineContent(line: SupportedLine)}
+      {#if hasWords(line)}
+        {line.words.map((w) => w.text).join("")}
+      {:else}
+        {@render line.snippet()}
+      {/if}
+    {/snippet}
+
+    {#snippet lyricLineContent(line: SupportedLine, progress: number)}
       <!-- Outline layer (behind everything) -->
       {#if unplayedOutline || playedOutline}
         <span
@@ -332,7 +362,7 @@
               {shadowStyle}
             "
         >
-          {line.words.map((w) => w.text).join("")}
+          {@render lineContent(line)}
         </span>
         {#if playedOutline}
           <span
@@ -346,7 +376,7 @@
               : '0'} 0);
               "
           >
-            {line.words.map((w) => w.text).join("")}
+            {@render lineContent(line)}
           </span>
         {/if}
       {/if}
@@ -360,7 +390,7 @@
             {shadowStyle}
           "
       >
-        {line.words.map((w) => w.text).join("")}
+        {@render lineContent(line)}
       </span>
       <!-- Played fill layer (clipped) -->
       <span
@@ -376,7 +406,7 @@
           : '0'} 0);
           "
       >
-        {line.words.map((w) => w.text).join("")}
+        {@render lineContent(line)}
       </span>
     {/snippet}
 

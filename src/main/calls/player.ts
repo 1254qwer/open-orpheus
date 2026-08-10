@@ -23,6 +23,7 @@ import {
   refreshLyricsStyle,
   setLyricsLocked,
   setLyricsOffset,
+  updateLyricsPlayInfo,
 } from "../windows/desktop-lyrics";
 import {
   updatePlayInfo,
@@ -52,6 +53,7 @@ export type PlayInfo = {
 
 registerCallHandler<[PlayInfo], void>("player.setInfo", (_event, playInfo) => {
   updatePlayInfo(playInfo);
+  updateLyricsPlayInfo(playInfo);
 });
 
 type ListElement = {

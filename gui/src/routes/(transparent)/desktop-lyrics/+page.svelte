@@ -3,7 +3,10 @@
   import { createAttachmentKey } from "svelte/attachments";
 
   import LyricsComponent from "$lib/components/Lyrics.svelte";
-  import type { LyricsStyle } from "$sharedTypes/desktop-lyrics";
+  import type {
+    DesktopLyricsPlayInfo,
+    LyricsStyle,
+  } from "$sharedTypes/desktop-lyrics";
   import type { Lyrics, LyricsStore } from "$sharedTypes/lyrics";
   import IconButton from "$lib/components/IconButton.svelte";
   import { cn } from "$lib/utils";
@@ -42,11 +45,22 @@
   let opacity = $state(1);
   let lyricStyle = $state<LyricsStyle | null>(null);
 
-  let lrcLyrics: Lyrics | null = $state(null);
-  let perwordLyrics: Lyrics | null = $state(null);
+  let rawLrcLyrics: Lyrics | null = $state(null as unknown as Lyrics);
+  let rawPerwordLyrics: Lyrics | null = $state(null as unknown as Lyrics);
   let translateLyrics: Lyrics | null = $state(null);
   let romaLyrics: Lyrics | null = $state(null);
   let slogan: string | null = $state(null);
+  let scrollable = $derived(
+    Boolean(rawLrcLyrics?.length || rawPerwordLyrics?.length)
+  );
+  let playInfo: DesktopLyricsPlayInfo | null = $state(null);
+
+  let lrcLyrics = $derived.by(() =>
+    insertInfoFirstLine(rawLrcLyrics, playInfo)
+  );
+  let perwordLyrics = $derived.by(() =>
+    insertInfoFirstLine(rawPerwordLyrics, playInfo)
+  );
 
   let currentTime = $state(0);
   let offset = $state(0);
@@ -55,8 +69,13 @@
   let interpolatedLyricLine = $state(true);
 
   let lyrics = $derived.by(() => {
-    if (perwordLyrics) return perwordLyrics;
-    if (lrcLyrics) return lrcLyrics;
+    if (perwordLyrics?.length) return perwordLyrics;
+    if (lrcLyrics?.length) return lrcLyrics;
+    // Neither regular nor per-word lyrics are present: render the
+    // "lyrics don't scroll" fallback as the only (snippet-backed) line.
+    if (!scrollable) {
+      return [{ start_time: 0, end_time: 0, snippet: noScrollingLrc }];
+    }
     return null;
   });
   let secondaryLyrics = $derived.by(() => {
@@ -67,18 +86,47 @@
   });
   let useProgress = $derived(perwordLyrics !== null || interpolatedLyricLine);
 
-  const items: ([string, string, string] | [string, string, string, true])[] =
-    $derived([
-      ["home", "detail", "打开详情页"],
-      ["poffset", "offset_forward", "向前偏移歌词 0.5 秒"], // TODO: In what situations offsets will be locked
-      ["moffset", "offset_back", "向后偏移歌词 0.5 秒"],
-      ["prev", "playprev", "播放上一首"],
-      [playing ? "topause" : "toplay", "play_pause", playing ? "暂停" : "播放"],
-      ["next", "playnext", "播放下一首"],
-      ["setting", "setting", "设置"],
-      ["lock", "lock", "锁定桌面歌词"],
-      ["close", "close", "关闭桌面歌词"],
-    ]);
+  // When the lyrics don't start at 0ms, prepend a synthetic first line
+  // carrying the song info so something is shown from the very beginning.
+  function insertInfoFirstLine(
+    lyrics: Lyrics | null,
+    info: DesktopLyricsPlayInfo | null
+  ): Lyrics | null {
+    if (!lyrics || lyrics.length === 0 || !info) return lyrics;
+    if (lyrics[0].start_time > 0) {
+      const text = [info.songName, info.artistName].filter(Boolean).join(" - ");
+      if (!text) return lyrics;
+      return [
+        {
+          start_time: 0,
+          end_time: lyrics[0].start_time,
+          words: [
+            {
+              text,
+              start_time: 0,
+              duration: lyrics[0].start_time,
+            },
+          ],
+        },
+        ...lyrics,
+      ];
+    }
+    return lyrics;
+  }
+
+  const items: (
+    [string, string, string] | [string, string, string, boolean]
+  )[] = $derived([
+    ["home", "detail", "打开详情页"],
+    ["poffset", "offset_forward", "向前偏移歌词 0.5 秒", !scrollable],
+    ["moffset", "offset_back", "向后偏移歌词 0.5 秒", !scrollable],
+    ["prev", "playprev", "播放上一首"],
+    [playing ? "topause" : "toplay", "play_pause", playing ? "暂停" : "播放"],
+    ["next", "playnext", "播放下一首"],
+    ["setting", "setting", "设置"],
+    ["lock", "lock", "锁定桌面歌词"],
+    ["close", "close", "关闭桌面歌词"],
+  ]);
 
   let previousVertical = false;
   $effect(() => {
@@ -125,15 +173,19 @@
       enableFullInteraction = false;
     });
 
+    api.events.playInfoUpdate((info) => {
+      playInfo = info;
+    });
+
     api.requestFullUpdate();
 
     const updateLyrics = (store: LyricsStore | null) => {
       if (!store) {
-        lrcLyrics = perwordLyrics = translateLyrics = romaLyrics = null;
+        rawLrcLyrics = rawPerwordLyrics = translateLyrics = romaLyrics = null;
         return;
       }
-      lrcLyrics = store.regular;
-      perwordLyrics = store["per-word"] ?? null;
+      rawLrcLyrics = store.regular;
+      rawPerwordLyrics = store["per-word"] ?? null;
       translateLyrics = store.translate ?? null;
       romaLyrics = store.roma ?? null;
     };
@@ -163,6 +215,16 @@
     api.dragWindow();
   }
 </script>
+
+{#snippet noScrollingLrc()}
+  <!-- svelte-ignore a11y_invalid_attribute -->
+  歌词不支持滚动，<a
+    href="javascript:"
+    onpointerdown={(e) => e.stopPropagation()}
+    onclick={() => api.performAction("detail")}
+    class="underline underline-offset-4">点击查看全部歌词</a
+  >
+{/snippet}
 
 {#if lyricStyle}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -219,7 +281,7 @@
               e.stopPropagation();
             }}
             onclick={() => api.performAction(action)}
-            class="cursor-pointer"
+            class={disabled ? "" : "cursor-pointer"}
             imgClass="size-6"
             {title}
           />
