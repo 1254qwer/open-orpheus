@@ -5,6 +5,7 @@ import photon from "@silvia-odwyer/photon-node";
 import { dragWindow } from "@open-orpheus/window";
 
 import {
+  DesktopLyricsPlayInfo,
   LineMode,
   LyricsStyle,
   ShowTranslate,
@@ -75,6 +76,14 @@ export function setLyricsLocked(locked: boolean) {
   return true;
 }
 
+let lyricsPlayInfo: DesktopLyricsPlayInfo | null = null;
+export function updateLyricsPlayInfo(info: DesktopLyricsPlayInfo | null) {
+  lyricsPlayInfo = info;
+  if (!desktopLyricsWindow || desktopLyricsWindow.isDestroyed()) return false;
+  desktopLyricsWindow.webContents.send("desktopLyrics.playInfoUpdate", info);
+  return true;
+}
+
 function performAction(action: string) {
   if (mainWindow) {
     mainWindow.webContents.send(
@@ -130,6 +139,7 @@ export default function createDesktopLyricsWindow() {
         refreshLyricsStyle();
         setLyricsOffset(lyricsOffset);
         setLyricsLocked(lyricsLocked);
+        updateLyricsPlayInfo(lyricsPlayInfo);
       },
       performAction: async (_event, action: string) => {
         performAction(action);

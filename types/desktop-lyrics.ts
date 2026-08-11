@@ -38,3 +38,10 @@ export interface LyricsStyle {
   dropShadow: boolean;
   showTranslate: ShowTranslate;
 }
+
+export interface DesktopLyricsPlayInfo {
+  albumId: string;
+  albumName: string;
+  artistName: string;
+  songName: string;
+}
