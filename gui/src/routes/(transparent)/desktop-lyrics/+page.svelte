@@ -71,9 +71,9 @@
   let lyrics = $derived.by(() => {
     if (perwordLyrics?.length) return perwordLyrics;
     if (lrcLyrics?.length) return lrcLyrics;
-    // Neither regular nor per-word lyrics are present: render the
+    // One or both of the lyrics presents but not scrollable: render the
     // "lyrics don't scroll" fallback as the only (snippet-backed) line.
-    if (!scrollable) {
+    if ((lrcLyrics || perwordLyrics) && !scrollable) {
       return [{ start_time: 0, end_time: 0, snippet: noScrollingLrc }];
     }
     return null;
