@@ -137,7 +137,7 @@
     return Math.max(0, Math.min(1, filledCh / totalCh));
   }
 
-  let adjustedTime = $derived(currentTime + offset);
+  let adjustedTime = $derived(Math.max(0, currentTime + offset));
   let currentIdx = $derived(
     lyrics ? findCurrentLineIndex(lyrics, adjustedTime) : -1
   );

@@ -18,6 +18,12 @@ export interface DesktopLyricsContract {
   dragWindow(): Promise<void>;
   changeOrientation(): Promise<void>;
   performAction(action: string): Promise<void>;
+  onMouseWheel(
+    pageX: number,
+    pageY: number,
+    delta: number,
+    modifier?: number
+  ): Promise<void>;
 }
 
 export interface DesktopLyricsPreviewContract {
