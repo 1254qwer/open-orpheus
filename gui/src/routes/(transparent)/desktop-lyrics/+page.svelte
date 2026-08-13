@@ -245,6 +245,13 @@
         enableFullInteraction = false;
       }, 1000);
     }}
+    onwheel={(e) => {
+      e.preventDefault();
+      let modifier = 0;
+      if (e.shiftKey) modifier += 4;
+      if (e.ctrlKey) modifier += 8;
+      api.onMouseWheel(e.pageX, e.pageY, -e.deltaY, modifier);
+    }}
   >
     <div
       class="flex justify-center gap-2 {locked

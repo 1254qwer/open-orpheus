@@ -1,8 +1,12 @@
 import { join } from "node:path";
 
-import { BrowserWindow } from "electron";
+import { BrowserWindow, screen } from "electron";
 import photon from "@silvia-odwyer/photon-node";
-import { dragWindow } from "@open-orpheus/window";
+import {
+  DesktopEnvironment,
+  dragWindow,
+  getDesktopEnvironment,
+} from "@open-orpheus/window";
 
 import {
   DesktopLyricsPlayInfo,
@@ -85,7 +89,7 @@ export function updateLyricsPlayInfo(info: DesktopLyricsPlayInfo | null) {
 }
 
 function performAction(action: string) {
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(
       "channel.call",
       "player.ondesktoplyricaction",
@@ -129,6 +133,8 @@ export default function createDesktopLyricsWindow() {
     performAction("close");
   });
 
+  const de = getDesktopEnvironment();
+
   registerIpcHandlers<DesktopLyricsContract>(
     desktopLyricsWindow.webContents,
     "desktopLyrics",
@@ -143,6 +149,29 @@ export default function createDesktopLyricsWindow() {
       },
       performAction: async (_event, action: string) => {
         performAction(action);
+      },
+      onMouseWheel: async (
+        _event,
+        pageX: number,
+        pageY: number,
+        delta: number,
+        modifier = 0
+      ) => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        let x = pageX;
+        let y = pageY;
+        if (de !== DesktopEnvironment.Wayland) {
+          const scrCursor = screen.getCursorScreenPoint();
+          [x, y] = [scrCursor.x, scrCursor.y];
+        }
+        mainWindow.webContents.send(
+          "channel.call",
+          "player.ondesktopmousewheel",
+          modifier,
+          delta,
+          x,
+          y
+        );
       },
       changeOrientation: async () => {
         if (!desktopLyricsWindow || desktopLyricsWindow.isDestroyed()) return;
