@@ -7,7 +7,7 @@ use napi::{
 };
 use napi_derive::napi;
 
-mod hook;
+mod proxy;
 mod wayland;
 mod x11;
 
@@ -159,14 +159,14 @@ pub fn capture_next_window_first_cursor_enter(
 #[napi_derive::module_init]
 fn main() {
     if !disable_display_server_hooks() {
-        hook::init_hooks();
+        proxy::init_hooks();
     }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn on_unload() {
     if !disable_display_server_hooks() {
-        hook::remove_hooks();
+        proxy::remove_hooks();
     }
 }
 
