@@ -1,3 +1,3 @@
-# @open-orpheus/dbus
+# @open-orpheus/smtc
 
-Module that provides D-Bus functionalities.
+Module that provides Windows SMTC functionalities.

@@ -33,6 +33,7 @@ export default defineConfig({
         "@open-orpheus/ui",
         "@open-orpheus/dbus",
         "@open-orpheus/smtc",
+        "@open-orpheus/nowplaying",
       ],
     },
   },

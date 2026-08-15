@@ -36,6 +36,12 @@ export async function createMediaSession(): Promise<void> {
       // loaded on this platform (kept out of other platform bundles).
       adapter = new (await import("./playback/adapters/SmtcAdapter")).default();
       break;
+    case "darwin":
+      // `@open-orpheus/nowplaying` is a macOS-only native module (MPNowPlayingInfoCenter).
+      adapter = new (
+        await import("./playback/adapters/NowPlayingAdapter")
+      ).default();
+      break;
     default:
       console.warn("Media session is not available on this platform.");
   }
