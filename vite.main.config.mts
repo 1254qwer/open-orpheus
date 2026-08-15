@@ -18,6 +18,7 @@ export default defineConfig({
     },
   },
   build: {
+    sourcemap: process.env.INLINE_SOURCEMAP ? "inline" : false,
     rollupOptions: {
       external: [
         // Node built-ins
