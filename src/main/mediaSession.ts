@@ -1,5 +1,6 @@
 import os from "node:os";
 
+import { toError } from "../util";
 import { events as lifecycleEvents } from "./lifecycle";
 import PlaybackController from "./playback/PlaybackController";
 import { PlaybackChange } from "./playback/types";
@@ -23,27 +24,56 @@ export const playbackController = new PlaybackController();
 
 let adapter: MediaSessionAdapter = new NoopAdapter();
 
+/**
+ * Load and construct a platform media-session adapter. Media integration is an
+ * optional feature: when the platform session is unavailable (e.g. no D-Bus
+ * session on Linux) this logs diagnostics and degrades to a no-op adapter
+ * instead of letting `createMediaSession` reject and abort startup.
+ */
+async function loadAdapter(
+  load: () => Promise<{ default: new () => MediaSessionAdapter }>,
+  name: string
+): Promise<MediaSessionAdapter> {
+  try {
+    return new (await load()).default();
+  } catch (err) {
+    LOGGER.warn(
+      { err: toError(err) },
+      "Media session integration (%s) failed to initialize; using a no-op adapter",
+      name
+    );
+    return new NoopAdapter();
+  }
+}
+
 export async function createMediaSession(): Promise<void> {
   switch (os.platform()) {
     case "linux":
       // MPRIS is Linux-only (`@open-orpheus/dbus`); load the adapter only here.
-      adapter = new (
-        await import("./playback/adapters/MprisAdapter")
-      ).default();
+      // Constructing it registers a D-Bus name and throws when the session bus
+      // is unavailable — `loadAdapter` degrades gracefully instead of aborting.
+      adapter = await loadAdapter(
+        () => import("./playback/adapters/MprisAdapter"),
+        "MPRIS"
+      );
       break;
     case "win32":
       // `@open-orpheus/smtc` is a Windows-only native module, so it is only
       // loaded on this platform (kept out of other platform bundles).
-      adapter = new (await import("./playback/adapters/SmtcAdapter")).default();
+      adapter = await loadAdapter(
+        () => import("./playback/adapters/SmtcAdapter"),
+        "SMTC"
+      );
       break;
     case "darwin":
       // `@open-orpheus/nowplaying` is a macOS-only native module (MPNowPlayingInfoCenter).
-      adapter = new (
-        await import("./playback/adapters/NowPlayingAdapter")
-      ).default();
+      adapter = await loadAdapter(
+        () => import("./playback/adapters/NowPlayingAdapter"),
+        "NowPlaying"
+      );
       break;
     default:
-      console.warn("Media session is not available on this platform.");
+      LOGGER.warn("Media session is not available on this platform.");
   }
 
   // OS media-session commands → renderer.

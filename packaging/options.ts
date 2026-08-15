@@ -5,6 +5,7 @@ import type { MakerFlatpakConfig } from "@electron-forge/maker-flatpak";
 import type { MakerAppImageConfigOptions } from "@reforged/maker-appimage";
 
 export const squirrel: MakerSquirrelConfig = {
+  name: "OpenOrpheus",
   title: "Open Orpheus",
   description: "An open-source Netease Cloud Music client",
   authors: "YUCLing",

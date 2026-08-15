@@ -90,7 +90,7 @@ protocol.registerSchemesAsPrivileged([
 
 app.setPath("userData", userdataDir);
 
-app.setAppUserModelId("io.github.yucling.open-orpheus");
+app.setAppUserModelId("com.squirrel.OpenOrpheus.OpenOrpheus");
 
 // Allow NCM to hack on `window.channel`
 // see https://github.com/electron/electron/blob/c2a0ec9931096ec83441521c8a75449cae96cd85/shell/renderer/api/electron_api_context_bridge.cc#L37

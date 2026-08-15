@@ -15,6 +15,7 @@ export default class PlayerCommandRouter {
   constructor(commands: Emittery<PlayerCommandEvents>) {
     commands.on("play", () => this.sendHotkey("play_pause_3"));
     commands.on("pause", () => this.sendHotkey("play_pause_3"));
+    commands.on("toggle", () => this.sendHotkey("play_pause_3"));
     commands.on("next", () => this.sendHotkey("next_1"));
     commands.on("previous", () => this.sendHotkey("prev_1"));
     commands.on("seek", ({ data }) => this.send("player.seek", data));
