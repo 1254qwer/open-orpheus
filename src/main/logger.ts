@@ -221,11 +221,19 @@ if (process.stdout.isTTY)
     options: {},
   });
 
-const logger = pino(
-  pino.transport({
-    targets: transport,
-  })
-);
+const stream = pino.transport({
+  targets: transport,
+});
+
+stream.addListener("error", (e) => {
+  try {
+    console.log("Log stream error", e);
+  } catch {
+    // Hmm, we are lost
+  }
+});
+
+const logger = pino(stream);
 
 ipcMain.on(
   "logger.log",
