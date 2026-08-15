@@ -27,6 +27,7 @@ interface ModuleInfo {
   path: string;
   workspaceDeps: string[];
   scripts: Record<string, string>;
+  os?: string[];
 }
 
 async function readModuleInfos(
@@ -51,6 +52,7 @@ async function readModuleInfos(
             path: modulePath,
             workspaceDeps,
             scripts: (pkg.scripts ?? {}) as Record<string, string>,
+            os: pkg.os as string[] | undefined,
           };
         } catch (e) {
           if (e instanceof Error && "code" in e && e.code === "ENOENT")
@@ -98,6 +100,27 @@ function computeLayers(modules: ModuleInfo[]): ModuleInfo[][] {
   return layers;
 }
 
+/**
+ * Checks whether a module's `os` field is compatible with the given platform,
+ * following npm's semantics:
+ * - missing/empty list => compatible everywhere
+ * - entries prefixed with `!` are negations (always incompatible if matched)
+ * - positive entries restrict compatibility to those platforms
+ */
+function isPlatformCompatible(
+  os: string[] | undefined,
+  platform: string
+): boolean {
+  if (!os || os.length === 0) return true;
+  const negated = new Set(
+    os.filter((entry) => entry.startsWith("!")).map((entry) => entry.slice(1))
+  );
+  const positive = os.filter((entry) => !entry.startsWith("!"));
+  if (negated.has(platform)) return false;
+  if (positive.length > 0 && !positive.includes(platform)) return false;
+  return true;
+}
+
 async function buildModules() {
   const modulesDir = resolve(
     dirname(fileURLToPath(import.meta.url)),
@@ -112,6 +135,12 @@ async function buildModules() {
   for (const layer of layers) {
     await Promise.all(
       layer.map(async (mod) => {
+        if (!isPlatformCompatible(mod.os, process.platform)) {
+          console.log(
+            `Skipping module: ${mod.dirName} (${mod.packageName}) - os field [${mod.os?.join(", ") ?? ""}] does not include current platform "${process.platform}"`
+          );
+          return;
+        }
         const targetScript = preferScript || "build";
         if (!mod.scripts[targetScript]) {
           if (skipIfNoScript) {

@@ -7,7 +7,7 @@ export type LyricsDispatcherEvents = {
   sloganupdate: string | null;
   playstateupdate: boolean;
   timeupdate: number;
-  playbackrateupdate: number;
+  playbackratechange: number;
 };
 
 // TODO: Lyric track within main process.
@@ -62,6 +62,6 @@ export default class LyricsDispatcher extends Emittery<LyricsDispatcherEvents> {
 
   set playbackRate(value) {
     this._playbackRate = value;
-    this.emit("playbackrateupdate", value);
+    this.emit("playbackratechange", value);
   }
 }
