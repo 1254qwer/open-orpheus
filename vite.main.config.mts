@@ -32,6 +32,7 @@ export default defineConfig({
         "@open-orpheus/window",
         "@open-orpheus/ui",
         "@open-orpheus/dbus",
+        "@open-orpheus/smtc",
       ],
     },
   },

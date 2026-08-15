@@ -21,6 +21,7 @@ pub enum PlaybackStatus {
     Stopped,
 }
 
+#[allow(dead_code)]
 struct Playlist {}
 
 #[napi]

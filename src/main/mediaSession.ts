@@ -7,7 +7,6 @@ import {
   MediaSessionAdapter,
   NoopAdapter,
 } from "./playback/adapters/MediaSessionAdapter";
-import MprisAdapter from "./playback/adapters/MprisAdapter";
 import PlayerCommandRouter from "./playback/PlayerCommandRouter";
 
 /** Track metadata passed through the frozen `player.setInfo` seam. */
@@ -27,7 +26,15 @@ let adapter: MediaSessionAdapter = new NoopAdapter();
 export async function createMediaSession(): Promise<void> {
   switch (os.platform()) {
     case "linux":
-      adapter = new MprisAdapter();
+      // MPRIS is Linux-only (`@open-orpheus/dbus`); load the adapter only here.
+      adapter = new (
+        await import("./playback/adapters/MprisAdapter")
+      ).default();
+      break;
+    case "win32":
+      // `@open-orpheus/smtc` is a Windows-only native module, so it is only
+      // loaded on this platform (kept out of other platform bundles).
+      adapter = new (await import("./playback/adapters/SmtcAdapter")).default();
       break;
     default:
       console.warn("Media session is not available on this platform.");
