@@ -336,21 +336,11 @@ impl PlayerInterface {
     #[zbus(property)]
     async fn can_play(&self) -> bool {
         self.metadata.is_some()
-            & self
-                .playback_state
-                .as_ref()
-                .map(|x| x.status != PlaybackStatus::Playing)
-                .unwrap_or(true)
     }
 
     #[zbus(property)]
     async fn can_pause(&self) -> bool {
         self.metadata.is_some()
-            & self
-                .playback_state
-                .as_ref()
-                .map(|x| x.status != PlaybackStatus::Playing)
-                .unwrap_or(false)
     }
 
     #[zbus(property)]
