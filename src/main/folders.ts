@@ -25,6 +25,9 @@ export const disableHardwareAccelerationFlag = resolve(
   "disable-hw-accel"
 );
 
+// Simple data files
+export const lastWebpackHash = resolve(data, "last-webpack-hash");
+
 export const defaultCache = resolve(data, "cache");
 
 export let cache = defaultCache;

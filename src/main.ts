@@ -1,6 +1,6 @@
 import path from "node:path";
 import os from "node:os";
-import { mkdir, readdir, rm } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 
 import { app, dialog, Menu, protocol, session } from "electron";
@@ -22,27 +22,30 @@ import {
   data as dataDir,
   disableHardwareAccelerationFlag,
   downloadTemp as downloadTempDir,
+  lastWebpackHash as lastWebpackHashPath,
   streamerTemp as streamerTempDir,
   userdata as userdataDir,
 } from "./main/folders";
 import { prepareDeviceId } from "./main/device";
 import { CORE_VERSION } from "./constants";
-import packManager from "./main/pack";
+import versions from "../versions.json";
+import packManager, { NO_WEBPACK_ERROR_MESSAGE } from "./main/pack";
 import showPackgeDownloadWindow from "./main/windows/package-download";
 import { mainWindow } from "./main/window";
 import registerAsProtocolClient, {
   checkOpenCommand as checkWebCommand,
 } from "./main/protocol";
 import { toError } from "./util";
-
-import type WebPack from "./main/packs/WebPack";
-import type { ProxyConfiguration } from "./main/request";
 import {
   LifecycleState,
   setLifecycleState,
   state as lifecycleState,
 } from "./main/lifecycle";
 import { checkEnvFlagPresent, isFileNotFound } from "./main/util";
+import { PackageDownloadReason } from "$sharedTypes/package-download";
+
+import type WebPack from "./main/packs/WebPack";
+import type { ProxyConfiguration } from "./main/request";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -50,8 +53,7 @@ if (started) {
 }
 
 // Enforce single instance
-const gotLock = app.requestSingleInstanceLock();
-if (!gotLock) {
+if (!app.requestSingleInstanceLock()) {
   app.quit();
 }
 
@@ -146,24 +148,132 @@ app.on("ready", async () => {
       m.default(openOrpheusSession.protocol);
     });
 
-    const shouldRedownload = process.argv.includes("--redownload-package");
-    try {
-      // Trigger an error to redownload the package if requested
-      if (shouldRedownload) throw new Error("REDOWNLOAD_REQ");
-      await packManager.loadWebPack();
-    } catch (e) {
-      if (!(e instanceof Error) || e.message !== "REDOWNLOAD_REQ")
-        logger.error({ name: "loader" }, "%s", e);
-      await showPackgeDownloadWindow(); // If user cancelled, this will throw and skip the rest of initialization
+    // The versions.commit that we've already installed or offered to the user
+    // through the download window. It prevents re-offering the window on every
+    // launch for the same version (e.g. after the user cancels). `null` means
+    // we've never recorded one yet.
+    let offeredWebPackCommit: string | null = await readFile(
+      lastWebpackHashPath,
+      {
+        encoding: "utf-8",
+      }
+    )
+      .then((content) => content.trim() || null)
+      .catch((err) => {
+        if (!isFileNotFound(err)) {
+          logger.warn(
+            { name: "loader", err: toError(err) },
+            "Cannot read last web pack commit hash."
+          );
+        }
+        return null;
+      });
+
+    let shouldRedownload = process.argv.includes("--redownload-package");
+
+    // Make sure the web pack on disk matches versions.commit. Whenever it
+    // doesn't — the version changed, or the pack is missing/corrupt — show
+    // the download window, then reload the freshly downloaded pack.
+    while (true) {
+      let downloadReason: PackageDownloadReason | null = null;
+
       if (shouldRedownload) {
-        // Redownload is successfully here, drop the argument then restart again
+        downloadReason = PackageDownloadReason.UserRequested;
+      } else {
+        try {
+          await packManager.loadWebPack();
+          const webPackCommit = await packManager
+            .getPack<WebPack>("web")
+            .getCommitHash();
+          // Offer the update when the installed pack doesn't match the commit
+          // versions.json expects, but only once per commit — once the user
+          // has been offered it (or cancelled), don't nag again.
+          if (
+            webPackCommit !== versions.commit &&
+            offeredWebPackCommit !== versions.commit
+          ) {
+            downloadReason = PackageDownloadReason.UpdateAvailable;
+          }
+        } catch (err) {
+          logger.error(
+            { name: "loader", err: toError(err) },
+            "Failed to load web pack."
+          );
+          downloadReason =
+            err instanceof Error && err.message === NO_WEBPACK_ERROR_MESSAGE
+              ? PackageDownloadReason.NotFound
+              : PackageDownloadReason.LoadFailed;
+        }
+      }
+
+      // We have a usable web pack that matches versions.commit
+      if (downloadReason === null) break;
+
+      // Show the download window. It resolves when the download completes and
+      // rejects if the user cancels or the download fails.
+      let cancelled = false;
+      let failed = false;
+      try {
+        await showPackgeDownloadWindow(downloadReason);
+      } catch (e) {
+        cancelled = true;
+        if (e !== "CANCEL") {
+          failed = true;
+          logger.error(
+            { name: "loader", err: toError(e) },
+            "Failed to download web pack."
+          );
+        }
+      }
+
+      // Remember this commit so we don't offer the download again on the next
+      // launch, whether the user downloaded, cancelled, or the download failed.
+      offeredWebPackCommit = versions.commit;
+      await writeFile(lastWebpackHashPath, offeredWebPackCommit).catch((e) => {
+        logger.warn(
+          { name: "loader", err: toError(e) },
+          "Cannot save current web pack commit hash."
+        );
+      });
+
+      if (cancelled) {
+        // The download didn't complete (cancelled or failed). If a usable pack
+        // is already on disk, keep launching with it; otherwise there is
+        // nothing to run with, so exit instead of looping forever.
+        const noUsablePack =
+          downloadReason === PackageDownloadReason.NotFound ||
+          downloadReason === PackageDownloadReason.LoadFailed;
+        if (failed) {
+          dialog.showErrorBox(
+            "Open Orpheus",
+            noUsablePack
+              ? "资源包下载失败"
+              : "资源包下载失败\n可通过 Open Orpheus 管理界面重新尝试下载"
+          );
+        }
+        if (noUsablePack) {
+          app.exit(1);
+          return;
+        }
+        if (shouldRedownload) {
+          // Cancelled or failed the forced redownload — drop the flag and use
+          // the pack that is already on disk.
+          shouldRedownload = false;
+          continue;
+        }
+        // The loaded (even if mismatched) pack is usable; keep launching.
+        break;
+      }
+
+      if (shouldRedownload) {
+        // Download succeeded, drop the flag and restart cleanly
         app.relaunch({
           args: process.argv.filter((v) => v !== "--redownload-package"),
         });
         app.quit();
         return;
       }
-      await packManager.loadWebPack(); // Simply try loading again after download, it will throw if the package is still invalid
+      // Loop to load the freshly downloaded web pack
     }
 
     // Some pages need window.channel, but do not really use

@@ -9,22 +9,60 @@
     fileCount?: number;
   };
 
+  declare const downloadReason: PackageDownloadReason;
   declare const downloadPackage: (
     callback: (progress: DownloadPackageProgress) => void
   ) => void;
 </script>
 
 <script lang="ts">
+  import { PackageDownloadReason } from "$sharedTypes/package-download";
+
   import { Button } from "$lib/components/ui/button";
   import FileQuestionMark from "@lucide/svelte/icons/file-question-mark";
+  import FileExclamationPoint from "@lucide/svelte/icons/file-exclamation-point";
+  import FolderSync from "@lucide/svelte/icons/folder-sync";
+  import FileClock from "@lucide/svelte/icons/file-clock";
   import LoaderCircle from "@lucide/svelte/icons/loader-circle";
 
   import versions from "../../../../versions.json";
+  import type { Component } from "svelte";
 
   type Phase = "idle" | "downloading" | "extracting" | "saving";
 
   let phase = $state<Phase>("idle");
   let downloadProgress = $state<DownloadPackageProgress | null>(null);
+
+  // svelte-ignore non_reactive_update
+  let Icon: Component;
+  // svelte-ignore non_reactive_update
+  let title: string;
+  // svelte-ignore non_reactive_update
+  let description: string;
+  switch (downloadReason) {
+    default:
+    case PackageDownloadReason.NotFound:
+      Icon = FileQuestionMark;
+      title = "缺少包文件";
+      description = "所需的包文件缺失。是否尝试自动下载？";
+      break;
+    case PackageDownloadReason.LoadFailed:
+      Icon = FileExclamationPoint;
+      title = "加载失败";
+      description = "无法加载所需的包文件。是否尝试自动重新下载？";
+      break;
+    case PackageDownloadReason.UserRequested:
+      Icon = FolderSync;
+      title = "重新下载包文件";
+      description = "确认重新下载包文件吗？";
+      break;
+    case PackageDownloadReason.UpdateAvailable:
+      Icon = FileClock;
+      title = "包文件有变更";
+      description =
+        "该版本 Open Orpheus 已切换到另一个版本的包文件。是否自动下载并覆盖？关闭本窗口可忽略此次更新";
+      break;
+  }
 
   function formatBytes(bytes: number): string {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -44,9 +82,9 @@
 <div class="flex h-screen flex-col items-center justify-center gap-6 px-8">
   {#if phase === "idle"}
     <div class="grid grid-cols-[auto_1fr] grid-rows-2 gap-2">
-      <FileQuestionMark class="row-span-2 mr-4 h-16 w-16 self-center" />
-      <h1 class="self-end text-2xl font-bold">缺少包文件</h1>
-      <p class="text-gray-600">所需的包文件缺失或无效。是否尝试自动下载？</p>
+      <Icon class="row-span-2 mr-4 h-16 w-16 self-center" />
+      <h1 class="self-end text-2xl font-bold">{title}</h1>
+      <p class="text-gray-600">{description}</p>
     </div>
     <div class="text-center">
       <Button onclick={startDownload} size="lg" class="cursor-pointer px-8"

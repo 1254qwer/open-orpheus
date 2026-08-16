@@ -3,8 +3,11 @@ import path from "node:path";
 import { BrowserWindow } from "electron";
 
 import packManager from "../pack";
+import { PackageDownloadReason } from "$sharedTypes/package-download";
 
-export default function showPackgeDownloadWindow(): Promise<void> {
+export default function showPackgeDownloadWindow(
+  downloadReason = PackageDownloadReason.LoadFailed
+): Promise<void> {
   return new Promise((resolve, reject) => {
     let downloadSuccess = false;
     const wnd = new BrowserWindow({
@@ -16,6 +19,7 @@ export default function showPackgeDownloadWindow(): Promise<void> {
       webPreferences: {
         partition: "open-orpheus",
         preload: path.join(__dirname, "package-download.js"),
+        additionalArguments: [`--download-reason=${downloadReason.toString()}`],
       },
     });
     wnd.setMenuBarVisibility(false);
@@ -25,18 +29,23 @@ export default function showPackgeDownloadWindow(): Promise<void> {
       wnd.loadURL("gui://frontend/package-download");
     }
     wnd.webContents.ipc.on("download-package", () => {
-      packManager.downloadPackage((progress) => {
-        wnd.webContents.send("download-package-progress", progress);
-        if (progress.step === "completed") {
-          downloadSuccess = true;
-          resolve();
+      packManager
+        .downloadPackage((progress) => {
+          wnd.webContents.send("download-package-progress", progress);
+          if (progress.step === "completed") {
+            downloadSuccess = true;
+            resolve();
+            wnd.close();
+          }
+        })
+        .catch((e) => {
+          reject(e);
           wnd.close();
-        }
-      });
+        });
     });
     wnd.on("closed", () => {
       if (!downloadSuccess) {
-        reject();
+        reject("CANCEL");
       }
     });
   });
