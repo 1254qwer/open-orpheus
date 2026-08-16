@@ -47,17 +47,17 @@
     <screenshot type="default">
       <caption>Main interface</caption>
       <caption xml:lang="zh-CN">主界面</caption>
-      <image>https://raw.githubusercontent.com/YUCLing/open-orpheus/0994bc97c3d235931224711be5ae3bb1833af62d/assets/screenshots/1.png</image>
+      <image>https://raw.githubusercontent.com/YUCLing/open-orpheus/2a27d45ac5ff430efc690e0a505a897f11f660a6/assets/screenshots/1.png</image>
     </screenshot>
     <screenshot>
       <caption>Player view</caption>
       <caption xml:lang="zh-CN">播放器界面</caption>
-      <image>https://raw.githubusercontent.com/YUCLing/open-orpheus/0994bc97c3d235931224711be5ae3bb1833af62d/assets/screenshots/2.png</image>
+      <image>https://raw.githubusercontent.com/YUCLing/open-orpheus/2a27d45ac5ff430efc690e0a505a897f11f660a6/assets/screenshots/2.png</image>
     </screenshot>
     <screenshot>
       <caption>Settings and customization</caption>
       <caption xml:lang="zh-CN">设置与个性化</caption>
-      <image>https://raw.githubusercontent.com/YUCLing/open-orpheus/0994bc97c3d235931224711be5ae3bb1833af62d/assets/screenshots/3.png</image>
+      <image>https://raw.githubusercontent.com/YUCLing/open-orpheus/2a27d45ac5ff430efc690e0a505a897f11f660a6/assets/screenshots/3.png</image>
     </screenshot>
   </screenshots>
 
