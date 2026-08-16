@@ -9,6 +9,8 @@ import type Pack from "./packs/Pack";
 
 import versions from "../../versions.json";
 
+export const NO_WEBPACK_ERROR_MESSAGE = "No usable web pack file found";
+
 async function chooseWebPackFile() {
   const webPack = resolve(base, "package", "web.pack");
   try {
@@ -24,7 +26,7 @@ async function chooseWebPackFile() {
   } catch {
     /* empty */
   }
-  throw new Error("No usable web pack file found");
+  throw new Error(NO_WEBPACK_ERROR_MESSAGE);
 }
 
 export type DownloadPackageProgress = {
