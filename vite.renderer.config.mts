@@ -1,70 +1,16 @@
 import { defineConfig, type Plugin, type UserConfig } from "vite";
-import { spawnSync, spawn } from "node:child_process";
+import { fork } from "node:child_process";
 import { resolve } from "node:path";
 
-import { onExit } from "@open-orpheus/lifecycle";
-
-const GUI_DIR = resolve(import.meta.dirname, "gui");
+const WRAPPER = resolve(import.meta.dirname, "scripts/gui-wrapper.mts");
 // Port for the SvelteKit dev server spawned alongside the dummy Vite dev server.
 const SVELTEKIT_DEV_PORT = 5174;
-
-function getPackageManagerCommand() {
-  const npmExecPath = process.env.npm_execpath;
-  if (npmExecPath) {
-    return { command: process.execPath, baseArgs: [npmExecPath] };
-  }
-
-  return { command: "pnpm", baseArgs: [] };
-}
-
-function runPackageManager(args: string[]) {
-  const { command, baseArgs } = getPackageManagerCommand();
-  return spawn(command, [...baseArgs, ...args], {
-    cwd: GUI_DIR,
-    stdio: ["ignore", "pipe", "pipe"],
-    shell: false,
-  });
-}
-
-function runPackageManagerSync(args: string[]) {
-  const { command, baseArgs } = getPackageManagerCommand();
-  const result = spawnSync(command, [...baseArgs, ...args], {
-    cwd: GUI_DIR,
-    stdio: ["ignore", "inherit", "inherit"],
-    shell: false,
-  });
-
-  if (result.error) throw result.error;
-  if (typeof result.status === "number" && result.status !== 0) {
-    throw new Error(
-      `Package manager command failed with exit code ${result.status}`
-    );
-  }
-}
 
 /**
  * Bridges Electron Forge's VitePlugin renderer lifecycle to the SvelteKit
  * project in `gui/`.
- *
- * - Build mode: runs `pnpm run build` inside `gui/`. SvelteKit's adapter-static
- *   writes directly to `.vite/build/gui`, which is exactly where Forge expects
- *   the renderer output.
- * - Dev mode (serve): spawns `pnpm run dev` inside `gui/` on a fixed port and
- *   proxies all requests from the Forge-managed Vite dev server to it.
  */
 function svelteKitPlugin(): Plugin {
-  let devProcess: ReturnType<typeof spawn> | null = null;
-
-  onExit(() => {
-    if (!devProcess) {
-      return;
-    }
-    // We don't want noises when killing the dev server
-    devProcess.stdout?.unpipe(process.stdout);
-    devProcess.stderr?.unpipe(process.stderr);
-    devProcess.kill();
-  });
-
   return {
     name: "sveltekit-bridge",
 
@@ -85,20 +31,45 @@ function svelteKitPlugin(): Plugin {
       return {};
     },
 
-    configureServer() {
-      devProcess = runPackageManager([
-        "run",
-        "dev",
-        "--port",
-        String(SVELTEKIT_DEV_PORT),
-      ]);
-      devProcess.stdout?.pipe(process.stdout);
-      devProcess.stderr?.pipe(process.stderr);
+    async configureServer() {
+      const proc = fork(WRAPPER, ["dev"], {
+        env: {
+          DEV_PORT: String(SVELTEKIT_DEV_PORT),
+        },
+      });
+      proc.stdout?.pipe(process.stdout);
+      proc.stderr?.pipe(process.stderr);
+      proc.on("error", (e) => {
+        throw e;
+      });
+      proc.on("exit", (code) => {
+        throw new Error(`Dev process exited with code ${code}`);
+      });
+      await new Promise<void>((resolve, reject) => {
+        proc.on("message", (msg) => {
+          if (msg === "READY") {
+            resolve();
+          } else {
+            reject(msg);
+          }
+        });
+      });
     },
 
-    buildStart() {
+    async buildStart() {
       if (!this.meta.watchMode) {
-        runPackageManagerSync(["run", "build"]);
+        await new Promise<void>((resolve, reject) => {
+          const proc = fork(WRAPPER, ["build"]);
+          proc.on("error", reject);
+          proc.on("exit", reject);
+          proc.on("message", (msg) => {
+            if (msg === "DONE") {
+              resolve();
+            } else {
+              reject(msg);
+            }
+          });
+        });
       }
     },
 
