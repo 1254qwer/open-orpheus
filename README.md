@@ -78,12 +78,6 @@ dnf copr enable luorain/open-orpheus # 启用 Copr 仓库
 dnf install open-orpheus # 安装
 ```
 
-### Arch Linux（第三方AUR）
-
-感谢 @zlicdt 发布
-
-https://aur.archlinux.org/packages/open-orpheus
-
 ### Gentoo
 
 可通过 Gentoo-zh Overlay 安装
