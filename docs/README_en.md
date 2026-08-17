@@ -61,11 +61,15 @@ What else do you expect! It just provides an environment for the original client
 
 ### Flathub
 
+_Automated Publish_
+
 One-click install via Flathub
 
 [![Get it on Flathub](https://flathub.org/api/badge?locale=en)](https://flathub.org/en/apps/io.github.yucling.open-orpheus)
 
 ### Fedora Linux
+
+_Automated Publish_
 
 [![Copr build status](https://copr.fedorainfracloud.org/coprs/luorain/open-orpheus/package/open-orpheus/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/luorain/open-orpheus/package/open-orpheus/)
 
@@ -76,7 +80,21 @@ dnf copr enable luorain/open-orpheus # Enable Copr repository
 dnf install open-orpheus # Install
 ```
 
+### Gentoo
+
+_Maintainer: @Puqns67_
+
+Install via Gentoo-zh Overlay
+
+```sh
+eselect repository enable gentoo-zh # Enable Gentoo-zh Overlay
+emerge --sync gentoo-zh # Sync the Gentoo-zh Overlay
+emerge --ask media-sound/open-orpheus-bin # Install
+```
+
 ### Debian Linux, Flatpak, AppImage, Windows, macOS
+
+_Automated Publish_
 
 Download from [Releases](https://github.com/YUCLing/open-orpheus/releases/latest)
 

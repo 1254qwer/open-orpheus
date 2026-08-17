@@ -63,11 +63,15 @@
 
 ### Flathub
 
+_自动维护_
+
 通过 Flathub 一键安装
 
 [![Get it on Flathub](https://flathub.org/api/badge?locale=zh-Hans)](https://flathub.org/zh-Hans/apps/io.github.yucling.open-orpheus)
 
 ### Fedora Linux
+
+_自动维护_
 
 [![Copr build status](https://copr.fedorainfracloud.org/coprs/luorain/open-orpheus/package/open-orpheus/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/luorain/open-orpheus/package/open-orpheus/)
 
@@ -80,6 +84,8 @@ dnf install open-orpheus # 安装
 
 ### Gentoo
 
+_维护者：@Puqns67_
+
 可通过 Gentoo-zh Overlay 安装
 
 ```sh
@@ -89,6 +95,8 @@ emerge --ask media-sound/open-orpheus-bin # 安装
 ```
 
 ### Debian Linux、Flatpak、AppImage、Windows、macOS
+
+_自动维护_
 
 前往 [Releases](https://github.com/YUCLing/open-orpheus/releases/latest) 下载
 
