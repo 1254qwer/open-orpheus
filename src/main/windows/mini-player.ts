@@ -6,7 +6,13 @@ import psd from "@webtoon/psd";
 import { DOMParser, Element } from "@xmldom/xmldom";
 import { dragWindow } from "@open-orpheus/window";
 
-import { mainWindow, OnDemandWindow, OnDemandWindowState } from "../window";
+import {
+  mainWindow,
+  ManagedWindow,
+  OnDemandWindow,
+  OnDemandWindowState,
+  SimpleManagedWindow,
+} from "../window";
 import { registerIpcHandlers } from "../../bridge/register";
 import { MiniPlayerContract } from "../../bridge/contracts/mini-player-api";
 import type { BtnImages, BtnState } from "../../../types/dui";
@@ -27,6 +33,7 @@ import type {
 import { registerLyricsHandlers } from "../../bridge/common/lyrics";
 import { LifecycleState, state as lifecycleState } from "../lifecycle";
 import { font } from "../gui";
+import { kv as settings } from "../settings";
 
 // State
 let playInfo: MiniPlayerPlayInfo | null = null;
@@ -426,65 +433,68 @@ export function getFullState(): MiniPlayerFullState {
   };
 }
 
-class MiniPlayerWindow extends OnDemandWindow {
-  constructor() {
-    super();
-
-    this.setData("name", "mini_player");
+function createWindow(state?: OnDemandWindowState): BrowserWindow {
+  const miniPlayerWindow = new BrowserWindow({
+    width: 310,
+    height: 50 + 340, // Total size: Main + List
+    transparent: true,
+    hasShadow: false,
+    frame: false,
+    resizable: false,
+    show: false,
+    roundedCorners: false,
+    title: "Open Orpheus Mini Player",
+    webPreferences: {
+      partition: "open-orpheus",
+      preload: join(__dirname, "mini-player.js"),
+    },
+  });
+  if (GUI_VITE_DEV_SERVER_URL) {
+    miniPlayerWindow.loadURL(`${GUI_VITE_DEV_SERVER_URL}/mini-player`);
+  } else {
+    miniPlayerWindow.loadURL("gui://frontend/mini-player");
   }
 
-  createWindow(state: OnDemandWindowState): BrowserWindow {
-    const miniPlayerWindow = new BrowserWindow({
-      width: 310,
-      height: 50 + 340, // Total size: Main + List
-      transparent: true,
-      hasShadow: false,
-      frame: false,
-      resizable: false,
-      show: false,
-      roundedCorners: false,
-      title: "Open Orpheus Mini Player",
-      webPreferences: {
-        partition: "open-orpheus",
-        preload: join(__dirname, "mini-player.js"),
+  miniPlayerWindow.on("close", (e) => {
+    if ((state && !state.alive) || lifecycleState === LifecycleState.Quitting)
+      return; // Allow closing when hiding or quitting
+    e.preventDefault();
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.webContents.send("channel.call", "player.onrequestclose", "");
+  });
+
+  registerIpcHandlers<MiniPlayerContract>(
+    miniPlayerWindow.webContents,
+    "miniPlayer",
+    {
+      requestFullUpdate: async () => getFullState(),
+      dragWindow: async () => {
+        if (!miniPlayerWindow || miniPlayerWindow.isDestroyed()) return;
+        const hwnd = miniPlayerWindow.getNativeWindowHandle();
+        dragWindow(hwnd);
       },
-    });
-    if (GUI_VITE_DEV_SERVER_URL) {
-      miniPlayerWindow.loadURL(`${GUI_VITE_DEV_SERVER_URL}/mini-player`);
-    } else {
-      miniPlayerWindow.loadURL("gui://frontend/mini-player");
+      fireCall: async (event, cmd, ...args) => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        mainWindow.webContents.send("channel.call", cmd, ...args);
+      },
     }
+  );
+  registerInputRegionHandlers(miniPlayerWindow);
+  registerLyricsHandlers(miniPlayerWindow);
+  return miniPlayerWindow;
+}
 
-    miniPlayerWindow.on("close", (e) => {
-      if (!state.alive || lifecycleState === LifecycleState.Quitting) return; // Allow closing when hiding or quitting
-      e.preventDefault();
-      if (!mainWindow || mainWindow.isDestroyed()) return;
-      mainWindow.webContents.send("channel.call", "player.onrequestclose", "");
-    });
-
-    registerIpcHandlers<MiniPlayerContract>(
-      miniPlayerWindow.webContents,
-      "miniPlayer",
-      {
-        requestFullUpdate: async () => getFullState(),
-        dragWindow: async () => {
-          if (!miniPlayerWindow || miniPlayerWindow.isDestroyed()) return;
-          const hwnd = miniPlayerWindow.getNativeWindowHandle();
-          dragWindow(hwnd);
-        },
-        fireCall: async (event, cmd, ...args) => {
-          if (!mainWindow || mainWindow.isDestroyed()) return;
-          mainWindow.webContents.send("channel.call", cmd, ...args);
-        },
-      }
-    );
-    registerInputRegionHandlers(miniPlayerWindow);
-    registerLyricsHandlers(miniPlayerWindow);
-    return miniPlayerWindow;
+class MiniPlayerOnDemandWindow extends OnDemandWindow {
+  createWindow(state: OnDemandWindowState): BrowserWindow {
+    return createWindow(state);
   }
 }
 
-export let window: MiniPlayerWindow;
-export default function createMiniPlayerWindow() {
-  window = new MiniPlayerWindow();
+export let window: ManagedWindow;
+export default async function createMiniPlayerWindow() {
+  window =
+    (await settings.get("window.lifecycle")) !== "on-demand"
+      ? new SimpleManagedWindow(createWindow())
+      : new MiniPlayerOnDemandWindow();
+  window.setData("name", "mini_player");
 }

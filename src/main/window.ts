@@ -57,7 +57,7 @@ function shouldRespectSizeConstraints(wnd: BrowserWindow) {
 app.on("browser-window-created", (event, wnd) => {
   setImmediate(() => {
     if (managedBrowserWindows.has(wnd)) return;
-    new AutoManagedWindow(wnd);
+    new SimpleManagedWindow(wnd);
   });
 });
 
@@ -289,6 +289,25 @@ export interface OnDemandWindowState {
   alive: boolean;
 }
 
+export class SimpleManagedWindow extends ManagedWindow {
+  constructor(window: BrowserWindow) {
+    super();
+
+    // This should never be assigned again.
+    this.window = window;
+
+    window.on("show", () => this.emit("show", window));
+    window.on("hide", () => this.emit("hide", window));
+  }
+
+  show() {
+    this.window?.show();
+  }
+  hide() {
+    this.window?.hide();
+  }
+}
+
 export abstract class OnDemandWindow<
   T extends WindowData = WindowData,
 > extends ManagedWindow<T> {
@@ -334,23 +353,4 @@ export abstract class OnDemandWindow<
   }
 
   abstract createWindow(state: OnDemandWindowState): BrowserWindow;
-}
-
-class AutoManagedWindow extends ManagedWindow {
-  constructor(window: BrowserWindow) {
-    super();
-
-    // This should never be assigned again.
-    this.window = window;
-
-    window.on("show", () => this.emit("show", window));
-    window.on("hide", () => this.emit("hide", window));
-  }
-
-  show() {
-    this.window?.show();
-  }
-  hide() {
-    this.window?.hide();
-  }
 }
