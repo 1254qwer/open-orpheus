@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 
-import LoggerPlugin from "./plugins/LoggerPlugin.mjs";
+import LoggerPlugin from "./plugins/LoggerPlugin.js";
 
 // https://vitejs.dev/config
 export default defineConfig({

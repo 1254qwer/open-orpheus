@@ -9,7 +9,7 @@ import type SkinPack from "./packs/SkinPack";
 import { setMiniPlayerFont } from "./windows/mini-player";
 import { setManageWindowFont } from "./windows/manage";
 
-const guiDir = join(__dirname, "gui");
+const guiDir = join(import.meta.dirname, "gui");
 
 export let font: string | null = null;
 

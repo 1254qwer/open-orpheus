@@ -254,7 +254,7 @@ registerCallHandler<[string, WindowDimensions, WindowAttributes], [boolean]>(
       backgroundColor: attributes.bk_color,
       frame: !attributes.spec_window, // is this correct?
       webPreferences: {
-        preload: path.join(__dirname, "preload.js"),
+        preload: path.join(import.meta.dirname, "preload.js"),
       },
     });
     wnd.loadURL(url);

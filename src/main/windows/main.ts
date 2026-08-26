@@ -44,7 +44,7 @@ export default async function createMainWindow() {
     show: false,
     frame: false,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(import.meta.dirname, "preload.js"),
       additionalArguments: ["--preload-channel=main"],
     },
   });

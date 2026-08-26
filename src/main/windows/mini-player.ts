@@ -446,7 +446,7 @@ function createWindow(state?: OnDemandWindowState): BrowserWindow {
     title: "Open Orpheus Mini Player",
     webPreferences: {
       partition: "open-orpheus",
-      preload: join(__dirname, "mini-player.js"),
+      preload: join(import.meta.dirname, "mini-player.js"),
     },
   });
   if (GUI_VITE_DEV_SERVER_URL) {

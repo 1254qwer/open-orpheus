@@ -281,7 +281,7 @@ export default class AppMenu extends Emittery<AppMenuEvents> {
         focusable: true,
         webPreferences: {
           partition: "open-orpheus",
-          preload: join(__dirname, "menu.js"),
+          preload: join(import.meta.dirname, "menu.js"),
           additionalArguments: ["--submenu"],
         },
       });

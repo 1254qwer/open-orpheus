@@ -20,7 +20,6 @@
     "src",
     "forge.env.d.ts",
     "packaging/**/*.ts",
-    "scripts/*.mts",
     "scripts/*.ts",
     "types/*.ts"
   ],

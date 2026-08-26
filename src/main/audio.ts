@@ -74,7 +74,7 @@ export default function registerAudioStreamerScheme(protocol: Protocol) {
     switch (requestUrl.hostname) {
       case "worklet": {
         const workletPath = path.join(
-          __dirname,
+          import.meta.dirname,
           "worklets",
           path.normalize(requestUrl.pathname)
         );

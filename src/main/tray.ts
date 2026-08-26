@@ -18,7 +18,7 @@ import iconFilename from "../../assets/icon_256.png?no-inline";
 
 let quitRequested = false;
 
-const defaultIconPath = resolve(__dirname, `.${iconFilename}`);
+const defaultIconPath = resolve(import.meta.dirname, `.${iconFilename}`);
 const defaultMenuItems: MenuItemConstructorOptions[] = [
   {
     label: "管理 Open Orpheus",
