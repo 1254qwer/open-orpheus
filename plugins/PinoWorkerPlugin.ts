@@ -59,7 +59,7 @@ export default function PinoWorkerPlugin(): Plugin {
             "_OVRD_" + hash("md5", references[entry], "hex"));
           overrideCode += JSON.stringify(entry);
           overrideCode += ":";
-          overrideCode += `resolve(__dirname, ${placeholder}),`;
+          overrideCode += `resolve(import.meta.dirname, ${placeholder}),`;
         }
         overrideCode += "};";
         return `import { resolve } from "node:path";${overrideCode}`;

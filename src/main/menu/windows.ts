@@ -27,7 +27,7 @@ export function createMenuWindow(): BrowserWindow {
     focusable: true,
     webPreferences: {
       partition: "open-orpheus",
-      preload: join(__dirname, "menu.js"),
+      preload: join(import.meta.dirname, "menu.js"),
     },
   });
 
@@ -64,7 +64,7 @@ export function createOverlayWindow(): BrowserWindow {
     fullscreen: !workaroundEnabled(WorkaroundFlags.OverlayNoFullscreen),
     webPreferences: {
       partition: "open-orpheus",
-      preload: join(__dirname, "menu.js"),
+      preload: join(import.meta.dirname, "menu.js"),
       additionalArguments: ["--wayland"],
     },
   });

@@ -374,7 +374,7 @@ const appModule = {
 
     // Generate installer-managed Flatpak scaffolding inside the sandbox,
     // using the actual packaged Electron app as source.
-    `node scripts/install-flatpak-scaffolding.mts out/${pkg.name}-linux-*`,
+    `node scripts/install-flatpak-scaffolding.ts out/${pkg.name}-linux-*`,
 
     // Install the built Electron app into /app/lib/{name}
     `install -d /app/lib/${appIdentifier}`,

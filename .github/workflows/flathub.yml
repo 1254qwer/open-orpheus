@@ -68,7 +68,7 @@ jobs:
       - name: Generate Flatpak builder manifest
         env:
           FLATPAK_SOURCE: ${{ steps.source.outputs.flatpak_source }}
-        run: node --experimental-strip-types scripts/build-flatpak-builder.mts
+        run: node --experimental-strip-types scripts/build-flatpak-builder.ts
 
       - name: Upload manifest artifacts
         uses: actions/upload-artifact@v7

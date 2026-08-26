@@ -38,7 +38,7 @@ export default function showManageWindow() {
     show: true,
     webPreferences: {
       partition: "open-orpheus",
-      preload: path.join(__dirname, "manage.js"),
+      preload: path.join(import.meta.dirname, "manage.js"),
     },
   });
   manageWndInstance = manageWnd;

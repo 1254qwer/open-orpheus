@@ -18,7 +18,7 @@ export default function showPackgeDownloadWindow(
       frame: true,
       webPreferences: {
         partition: "open-orpheus",
-        preload: path.join(__dirname, "package-download.js"),
+        preload: path.join(import.meta.dirname, "package-download.js"),
         additionalArguments: [`--download-reason=${downloadReason.toString()}`],
       },
     });

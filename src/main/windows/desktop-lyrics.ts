@@ -105,7 +105,7 @@ function createWindow(state?: OnDemandWindowState): BrowserWindow {
     title: "Open Orpheus Lyrics",
     webPreferences: {
       partition: "open-orpheus",
-      preload: join(__dirname, "desktop-lyrics.js"),
+      preload: join(import.meta.dirname, "desktop-lyrics.js"),
     },
   });
   if (GUI_VITE_DEV_SERVER_URL) {
@@ -221,7 +221,7 @@ export async function createDesktopLyricsPreview(
     webPreferences: {
       offscreen: true,
       partition: "open-orpheus",
-      preload: join(__dirname, "desktop-lyrics-preview.js"),
+      preload: join(import.meta.dirname, "desktop-lyrics-preview.js"),
     },
   });
 

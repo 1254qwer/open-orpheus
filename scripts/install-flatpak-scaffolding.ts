@@ -13,7 +13,7 @@ const { flatpak: flatpakOptions } = await import(
 const appDir = process.argv[2];
 if (!appDir) {
   throw new Error(
-    "Usage: node install-flatpak-scaffolding.mts <packaged-app-dir>"
+    "Usage: node install-flatpak-scaffolding.ts <packaged-app-dir>"
   );
 }
 console.log(`Using packaged app directory: ${appDir}`);
