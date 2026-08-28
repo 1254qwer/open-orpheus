@@ -30,6 +30,7 @@ export default defineConfig({
         "7z-wasm",
         "music-tag-native",
         "@silvia-odwyer/photon-node",
+        "@open-orpheus/avs3a-decoder",
         "@open-orpheus/database",
         "@open-orpheus/window",
         "@open-orpheus/ui",

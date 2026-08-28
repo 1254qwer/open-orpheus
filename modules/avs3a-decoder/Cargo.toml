@@ -1,0 +1,15 @@
+[package]
+name = "avs3a-decoder"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+napi.workspace = true
+napi-derive.workspace = true
+avs3a = { git = "https://github.com/1254qwer/avs3a-rust.git", rev = "59213e47a27ffa6ba9211bac1f5a6c6fd182e9d8" }
+
+[build-dependencies]
+napi-build = "2"

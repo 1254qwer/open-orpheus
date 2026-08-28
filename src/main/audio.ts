@@ -7,6 +7,7 @@ import { Protocol } from "electron";
 import mime from "mime";
 
 import { OnlineStreamer } from "./audio/OnlineStreamer";
+import { Av3aPcmStreamer, openAv3aFile } from "./audio/Av3aPcmStreamer";
 import type { AudioPlayInfo } from "../preload/Player";
 import { mainWindow } from "./window";
 import { playCacheManager } from "./cache";
@@ -16,6 +17,7 @@ import { events as lifecycleEvents } from "./lifecycle";
 import { kv as settings } from "./settings";
 import { toError } from "../util";
 import { decodeNcae } from "./ncae";
+import { parseRequestRange, RangeNotSatisfiableError } from "./audio/Range";
 
 enum AudioType {
   Local,
@@ -28,13 +30,28 @@ type CurrentAudioState = {
   | {
       type: AudioType.Local;
       path: string;
+      /**
+       * Set on the first request once we have looked at the file.
+       *
+       * Local play info carries no format field and the play cache stores tracks
+       * extensionless, so AV3A can only be detected by reading the bytes. That
+       * happens here, lazily, rather than in `updatePlayInfo`: keeping that
+       * handler synchronous means there is never a window where a request
+       * arrives before `state` is set. Resolves to null for everything else,
+       * which is then served straight from disk as before.
+       */
+      av3a?: Promise<Av3aPcmStreamer | null>;
     }
   | {
       type: AudioType.URL;
-      streamer: OnlineStreamer;
+      streamer: OnlineStreamer | Av3aPcmStreamer;
     }
 );
 let state: CurrentAudioState | null = null;
+
+function isAv3aPlayInfo(playInfo: AudioPlayInfo) {
+  return playInfo.type === 4 && playInfo.audioFormat === "av3a";
+}
 
 function sendProgress(prog: number) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -102,7 +119,19 @@ export default function registerAudioStreamerScheme(protocol: Protocol) {
         if (!state) return new Response("No play info yet", { status: 400 });
 
         if (state.type === AudioType.Local) {
-          const path = state.path;
+          const local = state;
+          local.av3a ??= openAv3aFile(local.path);
+          const av3a = await local.av3a;
+          if (state !== local) {
+            return new Response("Audio state has changed", { status: 410 });
+          }
+          if (av3a) {
+            // Every byte is already on disk, so there is no download to report.
+            sendProgress(1);
+            return av3a.handleRequest(request);
+          }
+
+          const path = local.path;
           const fileStat = await stat(path);
           const fileSize = fileStat.size;
           const mimeType = mime.getType(path) || "application/octet-stream";
@@ -111,34 +140,30 @@ export default function registerAudioStreamerScheme(protocol: Protocol) {
 
           const rangeHeader = request.headers.get("Range");
           if (rangeHeader) {
-            const match = rangeHeader.match(/^bytes=(\d+)-(\d*)$/);
-            if (match) {
-              const start = parseInt(match[1], 10);
-              const end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
+            try {
+              const { start, end } = parseRequestRange(rangeHeader, fileSize);
+              const nodeStream = createReadStream(path, {
+                start,
+                end: end - 1,
+              });
 
-              if (start <= end && start < fileSize) {
-                const clampedEnd = Math.min(end, fileSize - 1);
-                const chunkSize = clampedEnd - start + 1;
-                const nodeStream = createReadStream(path, {
-                  start,
-                  end: clampedEnd,
-                });
-
-                return new Response(Readable.toWeb(nodeStream), {
-                  status: 206,
-                  headers: {
-                    "Content-Type": mimeType,
-                    "Content-Length": String(chunkSize),
-                    "Content-Range": `bytes ${start}-${clampedEnd}/${fileSize}`,
-                    "Accept-Ranges": "bytes",
-                  },
-                });
-              }
+              return new Response(Readable.toWeb(nodeStream), {
+                status: 206,
+                headers: {
+                  "Content-Type": mimeType,
+                  "Content-Length": String(end - start),
+                  "Content-Range": `bytes ${start}-${end - 1}/${fileSize}`,
+                  "Accept-Ranges": "bytes",
+                },
+              });
+            } catch (error) {
+              if (!(error instanceof RangeNotSatisfiableError)) throw error;
             }
             // Invalid or unsatisfiable range — return 416
             return new Response("Range Not Satisfiable", {
               status: 416,
               headers: {
+                "Accept-Ranges": "bytes",
                 "Content-Range": `bytes */${fileSize}`,
               },
             });
@@ -229,6 +254,15 @@ lifecycleEvents.on("mainwindowcreated", (e) => {
             `Failed to destroy previous OnlineStreamer`
           );
         });
+      } else if (state?.type === AudioType.Local) {
+        state.av3a
+          ?.then((av3a) => av3a?.destroy())
+          .catch((e) => {
+            LOGGER.error(
+              { err: toError(e) },
+              `Failed to destroy previous local AV3A session`
+            );
+          });
       }
       state = null;
       if (!playInfo) return;
@@ -244,31 +278,38 @@ lifecycleEvents.on("mainwindowcreated", (e) => {
       } else if (playInfo.type === 4) {
         // URL Play
         const songId = playInfo.songId;
-        const streamer = new OnlineStreamer(playInfo.musicurl);
+        const isAv3a = isAv3aPlayInfo(playInfo);
+        const streamer = new OnlineStreamer(playInfo.musicurl, {
+          // AV3A is decoded on demand by its wrapper; a full source prefetch
+          // would duplicate the decoded PCM cache and defeat range playback.
+          background: !isAv3a,
+        });
 
         streamer.on("progress", (e) => {
           sendProgress(e.data.loaded / e.data.total);
         });
 
-        streamer.on("complete", async () => {
-          if (state?.playInfo.songId !== songId) return;
-          try {
-            const buf = await streamer.readBuffer();
-            playCacheManager
-              ?.cacheTrack(songId, buf, {
-                md5: playInfo.md5,
-                bitrate: playInfo.bitrate,
-                playInfoStr: playInfo.playInfoStr,
-                volumeGain: 0,
-                fileSize: buf.length,
-              })
-              .catch((err) => {
-                LOGGER.error({ err: toError(err) }, `Failed to cache track`);
-              });
-          } catch (e) {
-            LOGGER.error({ err: toError(e) }, `Cannot get streamed track`);
-          }
-        });
+        if (!isAv3a) {
+          streamer.on("complete", async () => {
+            if (state?.playInfo.songId !== songId) return;
+            try {
+              const buf = await streamer.readBuffer();
+              playCacheManager
+                ?.cacheTrack(songId, buf, {
+                  md5: playInfo.md5,
+                  bitrate: playInfo.bitrate,
+                  playInfoStr: playInfo.playInfoStr,
+                  volumeGain: 0,
+                  fileSize: buf.length,
+                })
+                .catch((err) => {
+                  LOGGER.error({ err: toError(err) }, `Failed to cache track`);
+                });
+            } catch (e) {
+              LOGGER.error({ err: toError(e) }, `Cannot get streamed track`);
+            }
+          });
+        }
 
         streamer.on("error", (e) => {
           LOGGER.error({ err: e.data }, `OnlineStreamer errored`);
@@ -277,7 +318,7 @@ lifecycleEvents.on("mainwindowcreated", (e) => {
         state = {
           type: AudioType.URL,
           playInfo,
-          streamer,
+          streamer: isAv3a ? new Av3aPcmStreamer(streamer) : streamer,
         };
       }
     }

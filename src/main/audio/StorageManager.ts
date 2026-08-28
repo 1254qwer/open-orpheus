@@ -1,7 +1,5 @@
-import { createReadStream } from "node:fs";
 import { mkdir, open, rm } from "node:fs/promises";
 import { dirname } from "node:path";
-import { Readable } from "node:stream";
 
 import type { FileHandle } from "node:fs/promises";
 
@@ -65,7 +63,7 @@ export default class StorageManager {
 
     await this.writeQueue;
     const fileHandle = await this.getFileHandle();
-    const buffer = Buffer.alloc(length);
+    const buffer = Buffer.allocUnsafe(length);
     let read = 0;
 
     while (read < length) {
@@ -80,6 +78,9 @@ export default class StorageManager {
       read += bytesRead;
     }
 
+    if (read !== length) {
+      throw new Error(`Short read from audio storage: ${read} of ${length}`);
+    }
     return buffer;
   }
 
@@ -93,11 +94,6 @@ export default class StorageManager {
       yield chunk;
       cursor = chunkEnd;
     }
-  }
-
-  createReadStream(start: number, end: number) {
-    if (end <= start) return Readable.from([]);
-    return createReadStream(this.filePath, { start, end: end - 1 });
   }
 
   async close() {

@@ -11,6 +11,11 @@ import { client } from "../request";
 
 import ChunkTracker from "./ChunkTracker";
 import DownloadScheduler from "./DownloadScheduler";
+import {
+  parseRequestRange,
+  RangeNotSatisfiableError,
+  normalizeBoundary,
+} from "./Range";
 import StorageManager from "./StorageManager";
 
 export type OnlineStreamerEvents = {
@@ -21,16 +26,13 @@ export type OnlineStreamerEvents = {
 
 export interface StreamerOptions {
   toleranceThreshold?: number;
+  /** Start the sequential background prefetch (enabled by default). */
+  background?: boolean;
 }
 
 type SourceMetadata = {
   totalLength: number;
   mimeType: string;
-};
-
-type RequestRange = {
-  start: number;
-  end: number;
 };
 
 const DEFAULT_TOLERANCE_THRESHOLD = 512 * 1024;
@@ -47,6 +49,7 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
   private readonly tracker = new ChunkTracker();
   private readonly storage: StorageManager;
   private readonly scheduler: DownloadScheduler;
+  private readonly background: boolean;
   private readonly metaAbortController = new AbortController();
   private readonly metaReadyPromise: Promise<void>;
   private readonly emittedErrors = new WeakSet<Error>();
@@ -75,6 +78,7 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
     super();
 
     this.url = url;
+    this.background = options.background ?? true;
     this.tempFilePath = join(
       OnlineStreamer.tempDir,
       `${process.pid}-${randomUUID()}.audio`
@@ -173,6 +177,39 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
     return this.storage.readBuffer(range.start, range.end);
   }
 
+  async ensureRange(start: number, end: number, signal?: AbortSignal) {
+    this.assertNotDestroyed();
+    await this.metaReadyPromise;
+    this.assertNotDestroyed();
+
+    const range = this.normalizeReadRange(start, end);
+    if (range.start === range.end) return;
+    if (this.tracker.isRangeDownloaded(range.start, range.end)) return;
+
+    const session = this.scheduler.createUrgentSession(signal);
+    try {
+      for await (const chunk of this.scheduler.streamUrgent(
+        range.start,
+        range.end,
+        session.signal
+      )) {
+        void chunk;
+        // The scheduler persists the downloaded bytes.
+      }
+    } finally {
+      session.close();
+    }
+    this.assertNotDestroyed();
+    if (signal?.aborted) {
+      throw toError(signal.reason ?? new Error("Remote range request aborted"));
+    }
+    if (!this.tracker.isRangeDownloaded(range.start, range.end)) {
+      throw new Error(
+        "Remote stream ended before the requested range was filled"
+      );
+    }
+  }
+
   createReadStream(start?: number, end?: number) {
     this.assertNotDestroyed();
     return Readable.from(this.createReadStreamIterator(start, end));
@@ -200,8 +237,13 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
     this.totalLength = metadata.totalLength;
     this.mimeType = metadata.mimeType;
 
-    await this.storage.setLength(this.totalLength);
-    this.scheduler.startBackground();
+    // On-demand sources only materialise the ranges they request. Besides
+    // avoiding needless work, this keeps a large remote file from being
+    // eagerly allocated on filesystems without sparse-file support.
+    if (this.background) {
+      await this.storage.setLength(this.totalLength);
+      this.scheduler.startBackground();
+    }
   }
 
   private async fetchMetadata(): Promise<SourceMetadata> {
@@ -352,50 +394,6 @@ export class OnlineStreamer extends Emittery<OnlineStreamerEvents> {
 
 export default OnlineStreamer;
 
-class RangeNotSatisfiableError extends Error {}
-
-function parseRequestRange(rangeHeader: string | null, totalLength: number) {
-  if (!rangeHeader) return { start: 0, end: totalLength };
-
-  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
-  if (!match) throw new RangeNotSatisfiableError();
-
-  const [, startText, endText] = match;
-  if (!startText && !endText) throw new RangeNotSatisfiableError();
-
-  let start: number;
-  let end: number;
-
-  if (!startText) {
-    const suffixLength = Number.parseInt(endText, 10);
-    if (!Number.isFinite(suffixLength) || suffixLength <= 0) {
-      throw new RangeNotSatisfiableError();
-    }
-    start = Math.max(0, totalLength - suffixLength);
-    end = totalLength;
-  } else {
-    start = Number.parseInt(startText, 10);
-    const parsedEnd = endText ? Number.parseInt(endText, 10) + 1 : undefined;
-    end = parsedEnd ?? totalLength;
-  }
-
-  if (!Number.isFinite(start) || !Number.isFinite(end)) {
-    throw new RangeNotSatisfiableError();
-  }
-
-  start = normalizeBoundary(start);
-  end = normalizeBoundary(end);
-
-  if (start >= totalLength || end <= start) {
-    throw new RangeNotSatisfiableError();
-  }
-
-  return {
-    start,
-    end: Math.min(end, totalLength),
-  } satisfies RequestRange;
-}
-
 function asyncIteratorToReadableStream(
   iterator: AsyncIterator<Buffer>,
   hooks: {
@@ -438,7 +436,7 @@ function parseContentLength(value: string | string[] | undefined) {
   if (!text) return null;
 
   const length = Number.parseInt(text, 10);
-  return Number.isFinite(length) && length > 0 ? length : null;
+  return Number.isSafeInteger(length) && length > 0 ? length : null;
 }
 
 function parseContentRangeTotal(value: string | string[] | undefined) {
@@ -447,17 +445,12 @@ function parseContentRangeTotal(value: string | string[] | undefined) {
   if (!match) return null;
 
   const length = Number.parseInt(match[1], 10);
-  return Number.isFinite(length) && length > 0 ? length : null;
+  return Number.isSafeInteger(length) && length > 0 ? length : null;
 }
 
 function firstHeaderValue(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0];
   return value;
-}
-
-function normalizeBoundary(value: number) {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.trunc(value));
 }
 
 function clamp(value: number, min: number, max: number) {
