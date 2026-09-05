@@ -1,45 +1,33 @@
 import path, { join } from "node:path";
-import { readFile, stat } from "node:fs/promises";
-import { createReadStream } from "node:fs";
-import { Readable } from "node:stream";
+import { readFile } from "node:fs/promises";
 
 import { Protocol } from "electron";
 import mime from "mime";
 
-import { OnlineStreamer } from "./audio/OnlineStreamer";
 import type { AudioPlayInfo } from "../preload/Player";
-import { mainWindow } from "./window";
-import { playCacheManager } from "./cache";
-import { normalizePath, sanitizeRelativePath } from "./util";
+import { sanitizeRelativePath } from "./util";
 import { data as dataDir, pack as packageDir } from "./folders";
 import { events as lifecycleEvents } from "./lifecycle";
 import { kv as settings } from "./settings";
 import { toError } from "../util";
 import { decodeNcae } from "./ncae";
+import { registerIpcHandlers } from "../bridge/register";
+import type { Av3aContract } from "../bridge/contracts/av3a-api";
+import { MediaEngine } from "./audio/MediaEngine";
+import { Av3aEngine } from "./av3a/Av3aEngine";
+import { isAv3aFile } from "./av3a/detect";
 
-enum AudioType {
-  Local,
-  URL,
-}
-
-type CurrentAudioState = {
-  playInfo: AudioPlayInfo;
-} & (
-  | {
-      type: AudioType.Local;
-      path: string;
-    }
-  | {
-      type: AudioType.URL;
-      streamer: OnlineStreamer;
-    }
-);
-let state: CurrentAudioState | null = null;
-
-function sendProgress(prog: number) {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.webContents.send("audio.onProgress", prog);
-}
+/**
+ * The two playback engines are distinct and mutually exclusive. The renderer
+ * is the router: `Player` sniffs/classifies the play info and tells us which
+ * engine a load targets. Each engine owns its whole lifecycle:
+ *  - `MediaEngine` serves the hidden `<audio>` element over `audio://audio`.
+ *  - `Av3aEngine` runs the AV3A decode utility process (direct renderer
+ *    channel) and is started by the renderer through the `av3a` bridge.
+ * This module only wires them to IPC + the protocol; it holds no engine state.
+ */
+const mediaEngine = new MediaEngine();
+const av3aEngine = new Av3aEngine();
 
 export async function readEffect(pathInfo: { path: string; pathtype: number }) {
   if (pathInfo.pathtype !== 2) {
@@ -99,65 +87,7 @@ export default function registerAudioStreamerScheme(protocol: Protocol) {
         }
       }
       case "audio": {
-        if (!state) return new Response("No play info yet", { status: 400 });
-
-        if (state.type === AudioType.Local) {
-          const path = state.path;
-          const fileStat = await stat(path);
-          const fileSize = fileStat.size;
-          const mimeType = mime.getType(path) || "application/octet-stream";
-
-          sendProgress(1);
-
-          const rangeHeader = request.headers.get("Range");
-          if (rangeHeader) {
-            const match = rangeHeader.match(/^bytes=(\d+)-(\d*)$/);
-            if (match) {
-              const start = parseInt(match[1], 10);
-              const end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
-
-              if (start <= end && start < fileSize) {
-                const clampedEnd = Math.min(end, fileSize - 1);
-                const chunkSize = clampedEnd - start + 1;
-                const nodeStream = createReadStream(path, {
-                  start,
-                  end: clampedEnd,
-                });
-
-                return new Response(Readable.toWeb(nodeStream), {
-                  status: 206,
-                  headers: {
-                    "Content-Type": mimeType,
-                    "Content-Length": String(chunkSize),
-                    "Content-Range": `bytes ${start}-${clampedEnd}/${fileSize}`,
-                    "Accept-Ranges": "bytes",
-                  },
-                });
-              }
-            }
-            // Invalid or unsatisfiable range — return 416
-            return new Response("Range Not Satisfiable", {
-              status: 416,
-              headers: {
-                "Content-Range": `bytes */${fileSize}`,
-              },
-            });
-          }
-
-          const nodeStream = createReadStream(path);
-
-          return new Response(Readable.toWeb(nodeStream), {
-            status: 200,
-            headers: {
-              "Content-Type": mimeType,
-              "Content-Length": String(fileSize),
-              "Accept-Ranges": "bytes",
-            },
-          });
-        } else if (state.type === AudioType.URL) {
-          return state.streamer.handleRequest(request);
-        }
-        return new Response("Unknown play info state", { status: 500 });
+        return mediaEngine.serve(request);
       }
       case "resource": {
         const type = mime.getType(requestUrl.pathname);
@@ -219,67 +149,52 @@ lifecycleEvents.on("mainwindowcreated", (e) => {
   );
 
   mainWindow.webContents.ipc.handle(
-    "audio.updatePlayInfo",
-    (event, playInfo: AudioPlayInfo | null) => {
-      if (state?.type === AudioType.URL) {
-        // We don't await this, let it destroy in background
-        state.streamer.destroy().catch((e) => {
-          LOGGER.error(
-            { err: toError(e) },
-            `Failed to destroy previous OnlineStreamer`
-          );
-        });
-      }
-      state = null;
-      if (!playInfo) return;
-
-      if (playInfo.type === 0) {
-        // Local File Play
-        playInfo.path = normalizePath(playInfo.path);
-        state = {
-          type: AudioType.Local,
-          playInfo,
-          path: playInfo.path,
-        };
-      } else if (playInfo.type === 4) {
-        // URL Play
-        const songId = playInfo.songId;
-        const streamer = new OnlineStreamer(playInfo.musicurl);
-
-        streamer.on("progress", (e) => {
-          sendProgress(e.data.loaded / e.data.total);
-        });
-
-        streamer.on("complete", async () => {
-          if (state?.playInfo.songId !== songId) return;
-          try {
-            const buf = await streamer.readBuffer();
-            playCacheManager
-              ?.cacheTrack(songId, buf, {
-                md5: playInfo.md5,
-                bitrate: playInfo.bitrate,
-                playInfoStr: playInfo.playInfoStr,
-                volumeGain: 0,
-                fileSize: buf.length,
-              })
-              .catch((err) => {
-                LOGGER.error({ err: toError(err) }, `Failed to cache track`);
-              });
-          } catch (e) {
-            LOGGER.error({ err: toError(e) }, `Cannot get streamed track`);
-          }
-        });
-
-        streamer.on("error", (e) => {
-          LOGGER.error({ err: e.data }, `OnlineStreamer errored`);
-        });
-
-        state = {
-          type: AudioType.URL,
-          playInfo,
-          streamer,
-        };
+    "audio.isAv3aFile",
+    async (_event, filePath: unknown) => {
+      if (typeof filePath !== "string" || filePath.length === 0) return false;
+      try {
+        return await isAv3aFile(filePath);
+      } catch (err) {
+        LOGGER.debug(
+          { err: toError(err), path: filePath },
+          `Failed to sniff file for AV3A`
+        );
+        return false;
       }
     }
   );
+
+  mainWindow.webContents.ipc.handle(
+    "audio.updatePlayInfo",
+    async (
+      _event,
+      playInfo: AudioPlayInfo | null,
+      engine: "media" | "av3a"
+    ) => {
+      // A new load always retires the previous engine first. Stopping either is
+      // cheap when idle. The renderer awaits this handler before starting the
+      // new engine, so this retirement always lands before it.
+      void av3aEngine.stop();
+      void mediaEngine.stop();
+      if (!playInfo) return;
+
+      // The renderer is the router (it sniffs local files / reads
+      // `audioFormat`) and tells us which engine this load targets; main never
+      // re-derives it. AV3A is decoded by a dedicated utility process
+      // (Av3aEngine) and started by the renderer through the `av3a` bridge once
+      // its worklet + channel are ready, so nothing is registered here — the
+      // <audio> element is never pointed at an AV3A stream.
+      if (engine === "av3a") return;
+      await mediaEngine.activate(playInfo);
+    }
+  );
+
+  registerIpcHandlers<Av3aContract>(mainWindow.webContents, "av3a", {
+    start: async (_event, playInfo: AudioPlayInfo) => {
+      await av3aEngine.start(playInfo);
+    },
+    stop: async () => {
+      await av3aEngine.stop();
+    },
+  });
 });
