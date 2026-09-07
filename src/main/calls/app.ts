@@ -106,6 +106,13 @@ registerCallHandler<[string, string], [string]>(
         if (typeof proxyConf !== "string") return [""];
         return [proxyConf];
       }
+      case "Update":
+        if (subItem === "Install") {
+          const updateConf = await settings.get("update.autoInstall");
+          if (typeof updateConf !== "string") return [""];
+          return [updateConf];
+        }
+        return [""];
       case "setting":
         if (subItem === "hardware-acceleration") {
           return [
@@ -124,6 +131,11 @@ registerCallHandler<[string, string, string], void>(
     switch (item) {
       case "Proxy":
         await settings.set("proxy", value);
+        return;
+      case "Update":
+        if (subItem === "Install") {
+          await settings.set("update.autoInstall", value);
+        }
         return;
       case "setting":
         if (subItem === "hardware-acceleration") {
