@@ -7,6 +7,7 @@ import { nodeArch } from "../common/arch.ts";
 import { createProjectTarball } from "../common/archive.ts";
 import { createPrebuiltBundle } from "../common/prebuilt.ts";
 import { runStreaming } from "../common/process.ts";
+import { CARGO_ZIGBUILD_VERSION, ZIG_VERSION } from "../common/toolchain.ts";
 import { cleanOutDir } from "../common/util.ts";
 import {
   createControlFile,
@@ -118,6 +119,8 @@ async function stageSource(
   await rm(resolve(srcDir, "debian", "rules.ejs"));
   await createRulesFile(resolve(srcDir, "debian", "rules"), {
     name,
+    cargoZigbuild: CARGO_ZIGBUILD_VERSION,
+    zig: ZIG_VERSION,
     installTools: options.installTools,
     prebuilt: !!options.prebuilt,
   });

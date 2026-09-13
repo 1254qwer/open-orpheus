@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 
 import { createProjectTarball } from "../common/archive.ts";
 import { createPrebuiltBundle } from "../common/prebuilt.ts";
+import { CARGO_ZIGBUILD_VERSION, ZIG_VERSION } from "../common/toolchain.ts";
 import { cleanOutDir } from "../common/util.ts";
 import { createSpecFile } from "./spec.ts";
 
@@ -130,6 +131,8 @@ export async function buildSrpm(
     homepage: rpmOptions.homepage ?? pkg.homepage,
     nodeVersion,
     wasmBindgen,
+    cargoZigbuild: CARGO_ZIGBUILD_VERSION,
+    zig: ZIG_VERSION,
     changelog,
     installTools: options.installTools,
     prebuilt: !!options.prebuilt,

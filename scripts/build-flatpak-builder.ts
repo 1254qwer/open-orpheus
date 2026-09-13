@@ -3,6 +3,11 @@ import { resolve } from "node:path";
 import { mkdir, readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { createProjectTarball } from "../packaging/common/archive.ts";
+import {
+  CARGO_ZIGBUILD_VERSION,
+  RUST_VERSION,
+  ZIG_VERSION,
+} from "../packaging/common/toolchain.ts";
 import { baseManifest, writeManifest } from "../packaging/flatpak/manifest.ts";
 
 const execFile = promisify(execFileCb);
@@ -76,7 +81,7 @@ const wasmBindgenTargets = [
   { triple: "aarch64-unknown-linux-gnu", arch: "aarch64" },
 ];
 
-interface WasmBindgenSource {
+interface ReleaseFileSource {
   type: "file";
   url: string;
   sha256: string;
@@ -84,7 +89,7 @@ interface WasmBindgenSource {
   "only-arches": string[];
 }
 
-const wasmBindgenSources: WasmBindgenSource[] = [];
+const wasmBindgenSources: ReleaseFileSource[] = [];
 
 console.log("Fetching wasm-bindgen release info from GitHub API...");
 const releaseUrl = `https://api.github.com/repos/wasm-bindgen/wasm-bindgen/releases/tags/${wasmBindgenVersion}`;
@@ -131,8 +136,6 @@ for (const target of wasmBindgenTargets) {
 console.log("wasm-bindgen CLI sources prepared.");
 
 // --- Step 4.6: Fetch Rust toolchain SHA256 checksums ---
-const rustVersion = "1.96.0";
-
 const rustArchTargets = [
   { triple: "x86_64-unknown-linux-gnu", arch: "x86_64" },
   { triple: "aarch64-unknown-linux-gnu", arch: "aarch64" },
@@ -149,7 +152,7 @@ interface RustSource {
 const rustSources: RustSource[] = [];
 
 for (const target of rustArchTargets) {
-  const tarballName = `rust-${rustVersion}-${target.triple}.tar.xz`;
+  const tarballName = `rust-${RUST_VERSION}-${target.triple}.tar.xz`;
   const sha256Url = `https://static.rust-lang.org/dist/${tarballName}.sha256`;
 
   console.log(`Fetching SHA256 for ${tarballName}...`);
@@ -170,7 +173,7 @@ for (const target of rustArchTargets) {
 }
 
 // wasm32-unknown-unknown std (arch-independent)
-const wasm32StdName = `rust-std-${rustVersion}-wasm32-unknown-unknown.tar.xz`;
+const wasm32StdName = `rust-std-${RUST_VERSION}-wasm32-unknown-unknown.tar.xz`;
 console.log(`Fetching SHA256 for ${wasm32StdName}...`);
 const wasm32Sha256Resp = await fetch(
   `https://static.rust-lang.org/dist/${wasm32StdName}.sha256`
@@ -190,6 +193,107 @@ rustSources.push({
 });
 
 console.log("Rust toolchain sources prepared.");
+
+// --- Step 4.7: Fetch cargo-zigbuild SHA256 checksums from GitHub API ---
+const cargoZigbuildTargets = [
+  { triple: "x86_64-unknown-linux-gnu", arch: "x86_64" },
+  { triple: "aarch64-unknown-linux-gnu", arch: "aarch64" },
+];
+
+const cargoZigbuildSources: ReleaseFileSource[] = [];
+
+console.log("Fetching cargo-zigbuild release info from GitHub API...");
+const cargoZigbuildReleaseUrl = `https://api.github.com/repos/rust-cross/cargo-zigbuild/releases/tags/v${CARGO_ZIGBUILD_VERSION}`;
+const cargoZigbuildReleaseResp = await fetch(cargoZigbuildReleaseUrl, {
+  headers: { Accept: "application/vnd.github+json" },
+});
+if (!cargoZigbuildReleaseResp.ok) {
+  throw new Error(
+    `GitHub API returned ${cargoZigbuildReleaseResp.status} for ${cargoZigbuildReleaseUrl}`
+  );
+}
+const cargoZigbuildReleaseData = (await cargoZigbuildReleaseResp.json()) as {
+  assets: Array<{ name: string; browser_download_url: string }>;
+};
+
+for (const target of cargoZigbuildTargets) {
+  const tarballName = `cargo-zigbuild-${target.triple}.tar.xz`;
+  const sha256Asset = cargoZigbuildReleaseData.assets.find(
+    (a) => a.name === `${tarballName}.sha256`
+  );
+  if (!sha256Asset) {
+    throw new Error(
+      `Cannot find ${tarballName}.sha256 in cargo-zigbuild v${CARGO_ZIGBUILD_VERSION} release assets`
+    );
+  }
+
+  console.log(`Fetching SHA256 for ${tarballName}...`);
+  const sha256Resp = await fetch(sha256Asset.browser_download_url);
+  if (!sha256Resp.ok) {
+    throw new Error(
+      `Failed to download ${tarballName}.sha256: ${sha256Resp.status}`
+    );
+  }
+  // Format: "SHA256  filename" or "SHA256 *filename"
+  const sha256 = (await sha256Resp.text()).trim().split(/\s+/)[0];
+
+  cargoZigbuildSources.push({
+    type: "file",
+    url: `https://github.com/rust-cross/cargo-zigbuild/releases/download/v${CARGO_ZIGBUILD_VERSION}/${tarballName}`,
+    sha256,
+    "dest-filename": tarballName,
+    "only-arches": [target.arch],
+  });
+}
+console.log("cargo-zigbuild sources prepared.");
+
+// --- Step 4.8: Fetch Zig SHA256 checksums from the official download index ---
+const zigTargets = [
+  { triple: "x86_64-linux", arch: "x86_64" },
+  { triple: "aarch64-linux", arch: "aarch64" },
+];
+
+interface ZigIndexEntry {
+  tarball: string;
+  shasum: string;
+}
+
+const zigSources: ReleaseFileSource[] = [];
+
+console.log("Fetching Zig download index...");
+const zigIndexResp = await fetch("https://ziglang.org/download/index.json");
+if (!zigIndexResp.ok) {
+  throw new Error(`Failed to fetch Zig download index: ${zigIndexResp.status}`);
+}
+const zigIndex = (await zigIndexResp.json()) as Record<
+  string,
+  Record<string, ZigIndexEntry | string>
+>;
+const zigRelease = zigIndex[ZIG_VERSION];
+if (!zigRelease) {
+  throw new Error(`Zig ${ZIG_VERSION} not found in the download index`);
+}
+
+for (const target of zigTargets) {
+  const entry = zigRelease[target.triple];
+  if (typeof entry !== "object" || entry === null) {
+    throw new Error(`No Zig ${ZIG_VERSION} tarball for ${target.triple}`);
+  }
+
+  const tarballName = entry.tarball.split("/").pop();
+  if (!tarballName) {
+    throw new Error(`Cannot derive tarball name from ${entry.tarball}`);
+  }
+
+  zigSources.push({
+    type: "file",
+    url: entry.tarball,
+    sha256: entry.shasum,
+    "dest-filename": tarballName,
+    "only-arches": [target.arch],
+  });
+}
+console.log("Zig sources prepared.");
 
 // --- Step 5: Create project source tarball (or use a remote URL) ---
 const { name: pkgName, version: pkgVersion } = pkg as {
@@ -277,12 +381,24 @@ const appModule = {
     "install -Dm755 wasm-bindgen-*/wasm-bindgen $FLATPAK_BUILDER_BUILDDIR/.npm-prefix/bin/wasm-bindgen",
     "install -Dm755 wasm-bindgen-*/wasm-bindgen-test-runner $FLATPAK_BUILDER_BUILDDIR/.npm-prefix/bin/wasm-bindgen-test-runner || true",
 
+    // Extract and install cargo-zigbuild CLI (build-time only; only the matching arch tarball is downloaded)
+    "tar xf cargo-zigbuild-*.tar.xz",
+    `install -Dm755 cargo-zigbuild-*/cargo-zigbuild $FLATPAK_BUILDER_BUILDDIR/.npm-prefix/bin/cargo-zigbuild`,
+
+    // Extract Zig (build-time only; only the matching arch tarball is downloaded).
+    // cargo-zigbuild shells out to `zig`, which resolves its std lib relative to
+    // its own executable, so keep the whole distribution and only symlink the
+    // binary onto PATH (selfExePath resolves the symlink back to .zig/zig).
+    "tar xf zig-*.tar.xz",
+    `mv zig-*-linux-*/ $FLATPAK_BUILDER_BUILDDIR/.zig`,
+    `ln -sf $FLATPAK_BUILDER_BUILDDIR/.zig/zig $FLATPAK_BUILDER_BUILDDIR/.npm-prefix/bin/zig`,
+
     // Install Rust toolchain (build-time only; only the matching arch tarball is downloaded)
-    `tar xf rust-${rustVersion}-*.tar.xz`,
-    `./rust-${rustVersion}-*/install.sh --prefix=$FLATPAK_BUILDER_BUILDDIR/.rust --without=rust-docs --disable-ldconfig`,
+    `tar xf rust-${RUST_VERSION}-*.tar.xz`,
+    `./rust-${RUST_VERSION}-*/install.sh --prefix=$FLATPAK_BUILDER_BUILDDIR/.rust --without=rust-docs --disable-ldconfig`,
     // Install wasm32-unknown-unknown std library
-    `tar xf rust-std-${rustVersion}-wasm32-unknown-unknown.tar.xz`,
-    `cp -r rust-std-${rustVersion}-wasm32-unknown-unknown/rust-std-wasm32-unknown-unknown/lib/rustlib/wasm32-unknown-unknown $FLATPAK_BUILDER_BUILDDIR/.rust/lib/rustlib/wasm32-unknown-unknown`,
+    `tar xf rust-std-${RUST_VERSION}-wasm32-unknown-unknown.tar.xz`,
+    `cp -r rust-std-${RUST_VERSION}-wasm32-unknown-unknown/rust-std-wasm32-unknown-unknown/lib/rustlib/wasm32-unknown-unknown $FLATPAK_BUILDER_BUILDDIR/.rust/lib/rustlib/wasm32-unknown-unknown`,
 
     `pnpm run build:modules`,
 
@@ -311,6 +427,8 @@ const appModule = {
     "generated-cargo-sources.json",
     ...wasmBindgenSources,
     ...rustSources,
+    ...cargoZigbuildSources,
+    ...zigSources,
     projectSource,
   ],
 };
