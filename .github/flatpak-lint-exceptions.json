@@ -1,0 +1,6 @@
+{
+  "io.github.yucling.open-orpheus": [
+    "appstream-screenshots-not-mirrored-in-ostree",
+    "appstream-external-screenshot-url"
+  ]
+}

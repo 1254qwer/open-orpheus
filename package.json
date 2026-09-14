@@ -21,7 +21,8 @@
     "lint:types:root": "tsc --noEmit -p tsconfig.json",
     "lint:types:gui": "pnpm --dir gui check",
     "format": "prettier --write .",
-    "build:modules": "node scripts/build-modules.ts"
+    "build:modules": "node scripts/build-modules.ts",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": {

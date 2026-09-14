@@ -7,9 +7,20 @@ import PlayerCommandRouter from "../../src/main/playback/PlayerCommandRouter";
 import { PlaybackChange, PlaybackStatus } from "../../src/main/playback/types";
 
 // `../window` pulls in Electron; the router only needs `webContents.send`.
-const { send } = vi.hoisted(() => ({ send: vi.fn() }));
+const { send, host } = vi.hoisted(() => {
+  const send = vi.fn();
+  return {
+    send,
+    /** Mutable so a test can model a window that is not available (yet). */
+    host: { window: null } as {
+      window: { webContents: { send: typeof send } } | null;
+    },
+  };
+});
 vi.mock("../../src/main/window", () => ({
-  mainWindow: { webContents: { send } },
+  get mainWindow() {
+    return host.window;
+  },
 }));
 
 const track = { id: "1", title: "title", artist: "artist", album: "album" };
@@ -46,6 +57,7 @@ const expectToggle = () =>
 
 beforeEach(() => {
   send.mockClear();
+  host.window = { webContents: { send } };
 });
 
 describe("PlayerCommandRouter playback translation", () => {
@@ -131,5 +143,92 @@ describe("PlayerCommandRouter playback translation", () => {
     player.applyPlaybackChange(PlaybackChange.Stopped);
     await commands.emit("play"); // retained track ⇒ revivable again
     expect(send).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("PlayerCommandRouter command routing", () => {
+  it("subscribes to every media-session command", () => {
+    const player = controllerAt(PlaybackStatus.Paused);
+    const commands = new Emittery<PlayerCommandEvents>();
+    const on = vi.spyOn(commands, "on");
+
+    new PlayerCommandRouter(commands, player);
+
+    const subscribed = on.mock.calls.map(([eventName]) => String(eventName));
+    expect(subscribed.sort()).toEqual(
+      [
+        "next",
+        "pause",
+        "play",
+        "previous",
+        "seek",
+        "setPosition",
+        "toggle",
+        "volume",
+      ].sort()
+    );
+  });
+
+  it("honours an explicit `toggle` while playing", async () => {
+    const { commands } = setup(PlaybackStatus.Playing);
+
+    await commands.emit("toggle");
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expectToggle();
+  });
+
+  it("maps next and previous onto their hotkeys", async () => {
+    const { commands } = setup(PlaybackStatus.Paused);
+
+    await commands.emit("next");
+    expect(send).toHaveBeenCalledWith(
+      "channel.call",
+      "winhelper.onHotkey",
+      "next_1",
+      true
+    );
+
+    send.mockClear();
+    await commands.emit("previous");
+    expect(send).toHaveBeenCalledWith(
+      "channel.call",
+      "winhelper.onHotkey",
+      "prev_1",
+      true
+    );
+  });
+
+  it("keeps relative and absolute seeks on separate channels", async () => {
+    const { commands } = setup(PlaybackStatus.Playing);
+
+    await commands.emit("seek", 5000);
+    expect(send).toHaveBeenCalledWith("player.seek", 5000);
+
+    send.mockClear();
+    await commands.emit("setPosition", 12000);
+    expect(send).toHaveBeenCalledWith("player.seekto", 12000);
+  });
+
+  it("forwards volume changes", async () => {
+    const { commands } = setup(PlaybackStatus.Playing);
+
+    await commands.emit("volume", 0.5);
+
+    expect(send).toHaveBeenCalledWith("player.volume", 0.5);
+  });
+
+  it("stays silent when there is no main window", async () => {
+    const { commands } = setup(PlaybackStatus.Paused);
+    host.window = null;
+
+    await commands.emit("next");
+    await commands.emit("previous");
+    await commands.emit("seek", 1);
+    await commands.emit("setPosition", 2);
+    await commands.emit("volume", 0.5);
+    await commands.emit("play"); // routed through the same window seam
+
+    expect(send).not.toHaveBeenCalled();
   });
 });
