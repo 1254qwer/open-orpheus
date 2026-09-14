@@ -63,6 +63,24 @@ async function readModuleInfos(
   ).filter((value) => value !== null);
 }
 
+/**
+ * Resolve a module script name for the current platform.
+ *
+ * Modules may declare platform-specific variants of a script by appending
+ * `:${process.platform}` — e.g. `build:linux` next to `build`. The variant wins
+ * when present, so a module can opt into tooling that only exists on some
+ * platforms (napi's `-x` needs cargo-zigbuild + zig, which we only provision on
+ * Linux) while every other platform keeps the plain script.
+ *
+ * Returns undefined when neither the variant nor the bare script exists.
+ */
+function resolvePlatformScript(
+  scripts: Record<string, string>,
+  base: string
+): string | undefined {
+  return [`${base}:${process.platform}`, base].find((name) => scripts[name]);
+}
+
 function computeLayers(modules: ModuleInfo[]): ModuleInfo[][] {
   const nameToModule = new Map(modules.map((m) => [m.packageName, m]));
   const layerCache = new Map<string, number>();
@@ -137,20 +155,19 @@ async function buildModules() {
           );
           return;
         }
-        const targetScript = preferScript || "build";
-        if (!mod.scripts[targetScript]) {
-          if (skipIfNoScript) {
-            console.log(
-              `Skipping module: ${mod.dirName} (${mod.packageName}) - script "${targetScript}" not found`
-            );
-            return;
-          }
+        const baseScript = preferScript || "build";
+        const script = resolvePlatformScript(mod.scripts, baseScript);
+        if (!script && skipIfNoScript) {
+          console.log(
+            `Skipping module: ${mod.dirName} (${mod.packageName}) - script "${baseScript}" not found`
+          );
+          return;
         }
-        const script = mod.scripts[targetScript] ? targetScript : "build";
+        const scriptToRun = script ?? "build";
         console.log(
-          `Building module: ${mod.dirName} (${mod.packageName}) [${script}]`
+          `Building module: ${mod.dirName} (${mod.packageName}) [${scriptToRun}]`
         );
-        const result = await runBuildCommand(mod.path, script);
+        const result = await runBuildCommand(mod.path, scriptToRun);
         if (result.status !== 0) {
           console.error(`Failed to build module: ${mod.dirName}`);
           process.exit(1);

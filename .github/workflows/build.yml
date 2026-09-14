@@ -46,6 +46,20 @@ jobs:
           version=$(awk '/^wasm-bindgen =/ { gsub(/"/, "", $3); print $3; exit }' Cargo.toml)
           cargo install "wasm-bindgen-cli@$version"
 
+      - name: Install cross-compilation toolchain
+        # napi-rs `build -x` runs `cargo zigbuild` for every non-Windows target
+        # (even when the target matches the host). cargo-zigbuild resolves zig
+        # itself, preferring the PyPI `ziglang` package (`python -m ziglang`) and
+        # falling back to a `zig` on PATH
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cargo_zigbuild_version=$(sed -n 's/.*CARGO_ZIGBUILD_VERSION = "\([^"]*\)".*/\1/p' packaging/common/toolchain.ts)
+          zig_version=$(sed -n 's/.*ZIG_VERSION = "\([^"]*\)".*/\1/p' packaging/common/toolchain.ts)
+          cargo install --locked "cargo-zigbuild@$cargo_zigbuild_version"
+          # --break-system-packages: the Ubuntu images are PEP 668 managed.
+          pip install --break-system-packages "ziglang==$zig_version"
+
       - name: Build native modules
         run: pnpm build:modules
 
