@@ -99,7 +99,7 @@ export async function createMediaSession(): Promise<void> {
   }
 
   // OS media-session commands → renderer.
-  new PlayerCommandRouter(adapter);
+  new PlayerCommandRouter(adapter, playbackController);
 
   // Derived state → OS media-session adapter.
   playbackController.on("trackchanged", ({ data }) => adapter.onTrack(data));
