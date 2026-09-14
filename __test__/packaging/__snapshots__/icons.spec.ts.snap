@@ -1,61 +1,215 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`writeIcons > keeps the extension of the source file 1`] = `
+[
+  0,
+  {},
+  {
+    "fixtures": [
+      0,
+      {},
+      {
+        "icon.ico": [
+          1,
+          {},
+          Uint8Array [
+            102,
+            97,
+            107,
+            101,
+            45,
+            105,
+            99,
+            111,
+          ],
+        ],
+      },
+    ],
+    "usr": [
+      0,
+      {},
+      {
+        "share": [
+          0,
+          {},
+          {
+            "icons": [
+              0,
+              {},
+              {
+                "hicolor": [
+                  0,
+                  {},
+                  {
+                    "256x256": [
+                      0,
+                      {},
+                      {
+                        "apps": [
+                          0,
+                          {},
+                          {
+                            "my-app.ico": [
+                              1,
+                              {},
+                              Uint8Array [
+                                102,
+                                97,
+                                107,
+                                101,
+                                45,
+                                105,
+                                99,
+                                111,
+                              ],
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+]
+`;
+
+exports[`writeIcons > skips sizes without a source file 1`] = `
+[
+  0,
+  {},
+  {
+    "fixtures": [
+      0,
+      {},
+      {
+        "icon_256.png": [
+          1,
+          {},
+          Uint8Array [
+            102,
+            97,
+            107,
+            101,
+            45,
+            112,
+            110,
+            103,
+            45,
+            50,
+            53,
+            54,
+          ],
+        ],
+      },
+    ],
+    "usr": [
+      0,
+      {},
+      {
+        "share": [
+          0,
+          {},
+          {
+            "icons": [
+              0,
+              {},
+              {
+                "hicolor": [
+                  0,
+                  {},
+                  {
+                    "256x256": [
+                      0,
+                      {},
+                      {
+                        "apps": [
+                          0,
+                          {},
+                          {
+                            "open-orpheus.png": [
+                              1,
+                              {},
+                              Uint8Array [
+                                102,
+                                97,
+                                107,
+                                101,
+                                45,
+                                112,
+                                110,
+                                103,
+                                45,
+                                50,
+                                53,
+                                54,
+                              ],
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+]
+`;
+
 exports[`writeIcons > writes raster icons to $size/apps/$appName.$ext 1`] = `
 [
   0,
   {},
   {
-    "Projects": [
+    "fixtures": [
       0,
       {},
       {
-        "open-orpheus": [
-          0,
+        "icon_256.png": [
+          1,
           {},
-          {
-            "assets": [
-              0,
-              {},
-              {
-                "icon_256.png": [
-                  1,
-                  {},
-                  Uint8Array [
-                    102,
-                    97,
-                    107,
-                    101,
-                    45,
-                    112,
-                    110,
-                    103,
-                    45,
-                    50,
-                    53,
-                    54,
-                  ],
-                ],
-                "icon_512.png": [
-                  1,
-                  {},
-                  Uint8Array [
-                    102,
-                    97,
-                    107,
-                    101,
-                    45,
-                    112,
-                    110,
-                    103,
-                    45,
-                    53,
-                    49,
-                    50,
-                  ],
-                ],
-              },
-            ],
-          },
+          Uint8Array [
+            102,
+            97,
+            107,
+            101,
+            45,
+            112,
+            110,
+            103,
+            45,
+            50,
+            53,
+            54,
+          ],
+        ],
+        "icon_512.png": [
+          1,
+          {},
+          Uint8Array [
+            102,
+            97,
+            107,
+            101,
+            45,
+            112,
+            110,
+            103,
+            45,
+            53,
+            49,
+            50,
+          ],
         ],
       },
     ],
@@ -152,38 +306,26 @@ exports[`writeIcons > writes scalable icons to scalable/apps/$appName.svg 1`] = 
   0,
   {},
   {
-    "Projects": [
+    "fixtures": [
       0,
       {},
       {
-        "open-orpheus": [
-          0,
+        "icon.svg": [
+          1,
           {},
-          {
-            "assets": [
-              0,
-              {},
-              {
-                "icon.svg": [
-                  1,
-                  {},
-                  Uint8Array [
-                    60,
-                    115,
-                    118,
-                    103,
-                    62,
-                    60,
-                    47,
-                    115,
-                    118,
-                    103,
-                    62,
-                  ],
-                ],
-              },
-            ],
-          },
+          Uint8Array [
+            60,
+            115,
+            118,
+            103,
+            62,
+            60,
+            47,
+            115,
+            118,
+            103,
+            62,
+          ],
         ],
       },
     ],

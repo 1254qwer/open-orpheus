@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("node:fs/promises", async () => (await import("memfs")).fs.promises);
+// memfs-backed, see `__mocks__/fs/promises.cts`.
+vi.mock("node:fs/promises");
 
 import { vol } from "memfs";
 

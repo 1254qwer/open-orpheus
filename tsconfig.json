@@ -22,7 +22,8 @@
     "forge.env.d.ts",
     "packaging/**/*.ts",
     "scripts/*.ts",
-    "types/*.ts"
+    "types/*.ts",
+    "__test__/**/*.ts"
   ],
   "exclude": ["gui"]
 }

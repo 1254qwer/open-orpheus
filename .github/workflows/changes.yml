@@ -12,6 +12,9 @@ on:
       build:
         description: Application bundle inputs changed
         value: ${{ jobs.changes.outputs.build }}
+      flathub:
+        description: Flatpak manifest inputs (packaging, toolchains, lockfiles) changed
+        value: ${{ jobs.changes.outputs.flathub }}
 
 permissions:
   contents: read
@@ -25,6 +28,7 @@ jobs:
       node: ${{ steps.filter.outputs.node }}
       rust: ${{ steps.filter.outputs.rust }}
       build: ${{ steps.filter.outputs.build }}
+      flathub: ${{ steps.filter.outputs.flathub }}
 
     steps:
       - name: Checkout repository
@@ -42,6 +46,7 @@ jobs:
             node:
               - ".github/workflows/changes.yml"
               - ".github/workflows/lint.yml"
+              - ".github/workflows/test.yml"
               - "package.json"
               - "pnpm-lock.yaml"
               - "pnpm-workspace.yaml"
@@ -49,12 +54,15 @@ jobs:
               - ".prettierignore"
               - ".prettierrc"
               - "tsconfig.json"
+              - "vitest.config.ts"
               - "forge.config.ts"
               - "forge.env.d.ts"
               - "vite*.config.ts"
               - "gui/**"
               - "src/**"
               - "types/**"
+              - "__test__/**"
+              - "__mocks__/**"
               - "modules/**/*.ts"
               - "modules/**/package.json"
               - "modules/**/tsconfig.json"
@@ -93,3 +101,17 @@ jobs:
               - "assets/**"
               - "LICENSE"
               - "versions.json"
+            # Only the inputs that shape the generated manifest: a full source
+            # build is expensive, so app source changes don't trigger it.
+            flathub:
+              - ".github/workflows/changes.yml"
+              - ".github/workflows/test.yml"
+              - ".github/workflows/flathub.yml"
+              - ".github/flatpak-lint-exceptions.json"
+              - "package.json"
+              - "pnpm-lock.yaml"
+              - "pnpm-workspace.yaml"
+              - "Cargo.toml"
+              - "Cargo.lock"
+              - "packaging/**"
+              - "scripts/build-flatpak-builder.ts"

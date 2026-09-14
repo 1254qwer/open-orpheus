@@ -64,7 +64,9 @@ function parseChildren(parent: Element, counter: { i: number }): LayoutNode[] {
 export function parseElementTemplate(xml: string): ElementTemplate | null {
   let doc;
   try {
-    doc = new DOMParser().parseFromString(xml, "text/xml");
+    // Malformed templates are rejected by returning `null` below, so there is
+    // no point in also letting xmldom print the parse failure to stderr.
+    doc = new DOMParser({ onError: () => {} }).parseFromString(xml, "text/xml");
   } catch {
     return null;
   }

@@ -16,7 +16,7 @@ exports[`createSymlink > creates a relocatable relative symlink 1`] = `
             "open-orpheus": [
               2,
               {
-                "target": "..\\lib\\open-orpheus\\open-orpheus",
+                "target": "../lib/open-orpheus/open-orpheus",
               },
             ],
           },
@@ -43,7 +43,7 @@ exports[`createSymlink > creates parent directories for the link 1`] = `
             "foo": [
               2,
               {
-                "target": "..\\lib\\foo\\foo",
+                "target": "../lib/foo/foo",
               },
             ],
           },
@@ -70,7 +70,7 @@ exports[`createSymlink > replaces an existing entry at the link path 1`] = `
             "open-orpheus": [
               2,
               {
-                "target": "..\\lib\\open-orpheus\\open-orpheus",
+                "target": "../lib/open-orpheus/open-orpheus",
               },
             ],
           },
