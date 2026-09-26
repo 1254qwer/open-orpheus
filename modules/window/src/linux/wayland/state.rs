@@ -46,6 +46,23 @@ pub(crate) struct WaylandConn {
     /// for a toplevel again has to be converted again. It is dropped with the
     /// surface, so a genuinely new surface starts out ordinary.
     pub(crate) layer_surfaces: HashMap<u32, LayerShellOptions>,
+    /// Surfaces that have been given the ordinary `xdg_toplevel` role.
+    ///
+    /// A compositor never releases a surface's role while the surface lives,
+    /// and unlike the layer role this one cannot be replaced by a layer surface:
+    /// asking is a fatal protocol error (`the wl_surface already has a role
+    /// assigned xdg_toplevel`). Remembered for the life of the surface so the
+    /// proxy can refuse instead of killing the connection.
+    pub(crate) toplevel_surfaces: HashSet<u32>,
+    /// The managed window id each surface belongs to, for the life of the
+    /// surface.
+    ///
+    /// `CUSTOM_ID_MAP` is what the application looks windows up by, and it is
+    /// cleared as soon as any object of the surface is destroyed — which is
+    /// exactly when a window asks for a role it cannot have: the old toplevel
+    /// is gone and the new one has no title yet. This keeps the name available
+    /// for that report, and dies with the surface itself.
+    pub(crate) surface_ids: HashMap<u32, String>,
     pub(crate) wl_to_layer: HashMap<u32, u32>,
     pub(crate) xdg_to_layer: HashMap<u32, u32>,
     /// Messages the proxy owes the client, queued by a request handler and
@@ -74,6 +91,8 @@ impl WaylandConn {
             layer_shell_id: None,
             layer_windows: HashMap::new(),
             layer_surfaces: HashMap::new(),
+            toplevel_surfaces: HashSet::new(),
+            surface_ids: HashMap::new(),
             wl_to_layer: HashMap::new(),
             xdg_to_layer: HashMap::new(),
             pending_to_client: Vec::new(),
@@ -100,6 +119,8 @@ impl WaylandConn {
         self.layer_shell_id = None;
         self.layer_windows.clear();
         self.layer_surfaces.clear();
+        self.toplevel_surfaces.clear();
+        self.surface_ids.clear();
         self.wl_to_layer.clear();
         self.xdg_to_layer.clear();
         self.pending_to_client.clear();
@@ -126,6 +147,8 @@ impl WaylandConn {
                 }
                 // The role dies with the surface it was assigned to.
                 self.layer_surfaces.remove(&id);
+                self.toplevel_surfaces.remove(&id);
+                self.surface_ids.remove(&id);
                 self.xdg_to_wl.retain(|_, v| *v != id);
                 self.wl_to_top.remove(&id);
                 self.pointer_focus.retain(|_, v| *v != id);
@@ -491,6 +514,40 @@ pub(crate) fn clear_first_cursor_enter_watchers_for_fd(fd: RawFd) {
         && let Ok(mut watchers) = watchers.lock()
     {
         watchers.retain(|(watch_fd, _), _| *watch_fd != fd);
+    }
+}
+
+// ── Refused layer-shell roles ─────────────────────────────────────────────
+
+/// Reports a window whose surface could not take the layer role, by the custom
+/// window id the application knows it under.
+///
+/// The role cannot be applied to an existing surface, so the application has to
+/// re-create the window; without this the failure is silent.
+pub(crate) type LayerShellRefusedCb = Box<dyn Fn(String) + Send + Sync>;
+
+pub(crate) static LAYER_SHELL_REFUSED: OnceLock<Mutex<Option<LayerShellRefusedCb>>> =
+    OnceLock::new();
+
+/// Register the one listener for refused roles.
+pub(crate) fn on_layer_shell_refused(cb: LayerShellRefusedCb) -> bool {
+    let slot = LAYER_SHELL_REFUSED.get_or_init(|| Mutex::new(None));
+    let Ok(mut slot) = slot.lock() else {
+        return false;
+    };
+    *slot = Some(cb);
+    true
+}
+
+pub(crate) fn fire_layer_shell_refused(window_id: String) {
+    let Some(slot) = LAYER_SHELL_REFUSED.get() else {
+        return;
+    };
+    let Ok(slot) = slot.lock() else {
+        return;
+    };
+    if let Some(callback) = slot.as_ref() {
+        callback(window_id);
     }
 }
 
