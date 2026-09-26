@@ -27,6 +27,7 @@ sighook = "0.10.0"
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", features = ["NSEvent", "NSWindow", "NSView"] }
 objc2-foundation = { version = "0.3", features = ["NSGeometry", "objc2-core-foundation"] }
+objc2-core-graphics = { version = "0.3", features = ["CGWindowLevel"] }
 
 [build-dependencies]
 napi-build = "2"

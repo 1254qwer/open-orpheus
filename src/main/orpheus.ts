@@ -1,5 +1,13 @@
 import { basename, dirname, extname, join, resolve } from "node:path";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import { createHash } from "node:crypto";
 
 import { Protocol } from "electron";
@@ -18,6 +26,48 @@ import {
 } from "./util";
 import { data as dataDir, storage as storageDir, wasm } from "./folders";
 import { client } from "./request";
+
+/**
+ * Names each cache write's temporary file apart from every other one.
+ *
+ * `Date.now()` alone repeats within a millisecond, and two requests for the
+ * same resource would then write and rename the same file: one of them would
+ * fail with no file to rename.
+ */
+let partialCacheWrites = 0;
+
+/** How long a leftover `.part` file is left alone before it is swept. */
+const PARTIAL_LIFETIME_MS = 10 * 60 * 1000;
+
+/**
+ * Remove partial cache writes a previous run left behind.
+ *
+ * A data file is published by renaming its `.part` file, so a process that dies
+ * mid-write leaves one behind. Only files older than {@link PARTIAL_LIFETIME_MS}
+ * are touched, so a write that is still in flight is never taken away.
+ */
+async function sweepPartialCacheWrites(dir: string): Promise<void> {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return; // nothing cached yet
+  }
+  const cutoff = Date.now() - PARTIAL_LIFETIME_MS;
+  for (const entry of entries) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await sweepPartialCacheWrites(path);
+      continue;
+    }
+    if (!entry.name.endsWith(".part")) continue;
+    try {
+      if ((await stat(path)).mtimeMs < cutoff) await unlink(path);
+    } catch {
+      // Already gone, or not ours to remove.
+    }
+  }
+}
 
 class NetworkError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -321,6 +371,162 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
       }
       // #endregion
 
+      // #region orpheus://orpheus/cacheresource
+      if (parsedUrl.pathname === "/cacheresource") {
+        // TODO: Index by `id` query, verify against `md5` query
+        const id = parsedUrl.searchParams.get("id");
+        if (!id) {
+          throw new LoadError("Bad Request: Missing ID parameter", 400);
+        }
+        const md5 = parsedUrl.searchParams.get("md5");
+        if (!md5) {
+          throw new LoadError("Bad Request: Missing MD5 parameter", 400);
+        }
+
+        const cacheResourceDir = join(dataDir, "cacheresource");
+        const baseDir = sanitizeRelativePath(cacheResourceDir, md5);
+        if (!baseDir) {
+          throw new LoadError("Bad file path", 400);
+        }
+        const fileDir = sanitizeRelativePath(baseDir, md5);
+        if (!fileDir) {
+          throw new LoadError("Bad file path", 400);
+        }
+
+        const path = parsedUrl.searchParams.get("path");
+        if (path) {
+          // Direct pack file read.
+          const filePath = sanitizeRelativePath(fileDir, path);
+          if (!filePath) throw new LoadError("Bad file path", 400);
+          const contentType = mime.getType(path) ?? "application/octet-stream";
+          return {
+            content: await readFile(filePath),
+            contentType,
+          };
+        }
+
+        const url = parsedUrl.searchParams.get("url");
+        if (!url) {
+          throw new LoadError("Bad Request: Missing URL parameter", 400);
+        }
+        const unpack = parsedUrl.searchParams.get("unpack");
+
+        const cfgPath = sanitizeRelativePath(baseDir, `${id}.cfg`);
+        if (!cfgPath) {
+          throw new LoadError("Bad file path", 400);
+        }
+
+        try {
+          if (unpack) {
+            const cfg = await readFile(cfgPath, { encoding: "utf-8" });
+            const json = JSON.parse(cfg);
+            json["code"] = 200;
+            return {
+              content: JSON.stringify(json),
+              contentType: "application/json",
+            };
+          } else {
+            const filePath = join(fileDir, `${md5}.dat`);
+            const cachedFile = await readFile(filePath);
+            const contentType = mime.getType(url) ?? "application/octet-stream";
+            return {
+              content: cachedFile,
+              contentType,
+            };
+          }
+        } catch {
+          // Fail silently, let's try refetching the files.
+        }
+
+        // Create the most nested dir recursively is enough
+        await mkdir(fileDir, { recursive: true });
+
+        const cacheStorage = (await import("./cache")).httpCacheStorage;
+        if (!cacheStorage) {
+          throw new LoadError("URL cache storage is unavailable", 500);
+        }
+        const response = await client(url, {
+          throwHttpErrors: false,
+          cache: cacheStorage,
+        });
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          throw new LoadError(
+            `Failed to fetch resource: ${response.statusMessage}`,
+            response.statusCode
+          );
+        }
+
+        const hash = createHash("md5");
+        hash.update(response.rawBody);
+        const actualMd5 = hash.digest("hex");
+        if (md5 !== actualMd5) throw new LoadError("Bad MD5", 500);
+
+        if (unpack) {
+          const zipper = await unzipper.Open.buffer(
+            Buffer.from(
+              response.rawBody.buffer,
+              response.rawBody.byteOffset,
+              response.rawBody.byteLength
+            )
+          );
+          const cfg = {
+            file: "",
+            files: [] as string[],
+            filesdir: md5,
+            id,
+            md5,
+          };
+          await Promise.all(
+            zipper.files.map(async (file) => {
+              cfg.files.push(file.path);
+              const path = sanitizeRelativePath(fileDir, file.path);
+              if (!path) return Promise.resolve(); // Skip
+              await mkdir(dirname(path), { recursive: true });
+              await writeFile(path, await file.buffer());
+            })
+          );
+          await writeFile(cfgPath, JSON.stringify(cfg));
+          return {
+            content: JSON.stringify({
+              code: 200,
+              ...cfg,
+            }),
+            contentType: "application/json",
+          };
+        } else {
+          const cfg = JSON.stringify({
+            file: `${md5}.dat`,
+            files: [],
+            filesdir: md5,
+            id,
+            md5,
+          });
+          // Write the body aside and publish it by rename, so a reader that
+          // arrives while it is being written sees either nothing (and
+          // refetches) or the whole file — never a truncated one. The config is
+          // the pointer to it, so it lands last.
+          const dataPath = join(fileDir, `${md5}.dat`);
+          const partialPath = `${dataPath}.${process.pid}.${++partialCacheWrites}.part`;
+          try {
+            await writeFile(partialPath, response.rawBody);
+            await rename(partialPath, dataPath);
+          } catch (error) {
+            // A write that did not land must not leave its temp file behind; a
+            // crash is covered by the sweep at startup.
+            await unlink(partialPath).catch(() => {});
+            throw error;
+          }
+          await writeFile(cfgPath, cfg);
+          const contentType =
+            response.headers["content-type"] || "application/octet-stream";
+          return {
+            content: response.rawBody,
+            contentType,
+          };
+        }
+      }
+      // #endregion
+
       // #region orpheus://orpheus/* (default)
       return await loadFromFilePath(parsedUrl.pathname);
     // #endregion
@@ -426,6 +632,8 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
 }
 
 export default function registerOrpheusScheme(protocol: Protocol) {
+  // Before anything can be served: leftovers from a run that died mid-write.
+  void sweepPartialCacheWrites(join(dataDir, "cacheresource"));
   protocol.handle("orpheus", async (request) => {
     try {
       const {

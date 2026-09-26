@@ -142,6 +142,12 @@ pub fn drag_window(env: Env, hwnd: Buffer) -> Result<()> {
     Ok(())
 }
 
+#[napi]
+pub fn set_window_as_background(env: Env, hwnd: Buffer) -> Result<()> {
+    let _ = hwnd;
+    env.throw("Linux does not support this API.")
+}
+
 pub fn set_input_region(window_handle: Unknown, rects: Option<Array>) -> Result<bool> {
     let mut parsed_rects = None;
     if let Some(arr) = rects {

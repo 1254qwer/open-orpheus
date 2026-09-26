@@ -103,3 +103,15 @@ export function checkEnvFlagPresent(name: string) {
   const val = process.env[name];
   return val === "1" || val === "true";
 }
+
+/**
+ * Whether a URL safe internal app URL.
+ */
+export function isAppUrl(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return protocol === "orpheus:" && hostname === "orpheus";
+  } catch {
+    return false;
+  }
+}

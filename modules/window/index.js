@@ -711,5 +711,6 @@ module.exports.isLayerShellAvailable = nativeBinding.isLayerShellAvailable
 module.exports.LayerShellLayer = nativeBinding.LayerShellLayer
 module.exports.onLayerShellRoleRefused = nativeBinding.onLayerShellRoleRefused
 module.exports.setInputRegion = nativeBinding.setInputRegion
+module.exports.setWindowAsBackground = nativeBinding.setWindowAsBackground
 module.exports.useLayerShellForNextWindow = nativeBinding.useLayerShellForNextWindow
 module.exports.validateLayerShellOptions = nativeBinding.validateLayerShellOptions

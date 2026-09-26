@@ -110,6 +110,8 @@ export declare function onLayerShellRoleRefused(callback: (windowId: string) => 
  */
 export declare function setInputRegion(windowHandle: string | Buffer, rects?: { x: number, y: number, w: number, h: number }[] | null): boolean
 
+export declare function setWindowAsBackground(hwnd: Buffer): void
+
 /**
  * Make the next window a layer surface.
  *
@@ -121,11 +123,14 @@ export declare function setInputRegion(windowHandle: string | Buffer, rects?: { 
 export declare function useLayerShellForNextWindow(options: LayerShellOptions): boolean
 
 /**
- * Whether a layer-shell declaration would be accepted.
+ * Whether a layer-shell declaration could be sent.
  *
- * The same validation `useLayerShellForNextWindow` applies, without queueing
- * anything: callers can report a declaration that could never be sent, and a
- * settings UI can check a choice before anything is created. `false` also
- * means the compositor cannot take layer surfaces at all.
+ * The same option validation `useLayerShellForNextWindow` applies, without
+ * queueing anything: callers can report a declaration that could never be
+ * sent, and a settings UI can check a choice before anything is created.
+ *
+ * This answers for the options only, never for the compositor: whether it
+ * takes layer surfaces at all is `isLayerShellAvailable()`, and a caller that
+ * needs both asks both.
  */
 export declare function validateLayerShellOptions(options: LayerShellOptions): boolean

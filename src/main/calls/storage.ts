@@ -218,7 +218,7 @@ registerCallHandler<[string, string], void>(
         ...execResult
       );
     } catch (error) {
-      LOGGER.error({ sql, err: error }, "Error executing SQL transaction: %s");
+      LOGGER.error({ sql, err: error }, "Error executing SQL transaction");
       event.sender.send(
         "channel.call",
         "storage.onexecsqldone",

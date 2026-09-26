@@ -467,6 +467,9 @@ app.on("window-all-closed", () => {
 app.on("before-quit", () => {
   // Allow some windows to be closed.
   setLifecycleState(LifecycleState.Quitting);
+  // On macOS, music desktop window isn't being closed by Electron for some reason,
+  // we are destroying it here manually.
+  import("./main/calls/desktop").then((m) => m.musicDesktopWindow?.destroy());
 });
 
 app.on("open-file", (e, path) => {
