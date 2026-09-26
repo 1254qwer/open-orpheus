@@ -226,6 +226,17 @@ export abstract class ManagedWindow<
       return { action: "deny" };
     });
 
+    this.applyRecordedState(wnd);
+  }
+
+  /**
+   * Apply the state this wrapper recorded to `wnd`.
+   *
+   * Called when a window is bound, and again when state moves to a window that
+   * is already bound: a policy switch creates its replacement eagerly, so the
+   * state arrives after that window exists.
+   */
+  private applyRecordedState(wnd: BrowserWindow) {
     let size: { x: number; y: number } | undefined;
     if ((size = this.getData("maximumSize"))) {
       this.setMaximumSize(size.x, size.y);
@@ -268,6 +279,17 @@ export abstract class ManagedWindow<
     const wnd = this._window;
     if (!wnd || wnd.isDestroyed()) return null;
     return wnd;
+  }
+
+  /**
+   * Whether the window is on screen or has been asked to appear.
+   *
+   * A policy switch asks this rather than `isVisible()`: an on-demand window
+   * that was shown but has not reached `ready-to-show` yet is not visible, and
+   * treating that as "hidden" would drop the request along with the old window.
+   */
+  wantsToBeVisible(): boolean {
+    return this.liveWindow()?.isVisible() ?? false;
   }
 
   /** Load a renderer route, using the dev server when one is configured. */
@@ -335,7 +357,13 @@ export abstract class ManagedWindow<
    * The generation guard cancels work left over from a previous surface.
    */
   private reapplyNativeState() {
-    if (!this.isWayland()) return;
+    if (!this.isWayland()) {
+      // The input region is set on the window itself here, not on a surface, so
+      // a call that failed because the window was not ready yet is simply sent
+      // again on the next show.
+      this.reapplyInputRegion();
+      return;
+    }
     if (this._reapplyTimer) return;
 
     const generation = this._surfaceGeneration;
@@ -372,6 +400,14 @@ export abstract class ManagedWindow<
     // A known window id is what makes the input region land; the native module
     // reports failure until the surface exists, which is our readiness probe.
     return setInputRegion(wnd.id.toString(), toNativeRegions(regions));
+  }
+
+  /** Re-send the recorded input region to the window itself. */
+  private reapplyInputRegion(): void {
+    const regions = this._nativeState.postShow.inputRegions;
+    const wnd = this.liveWindow();
+    if (regions === null || !wnd) return;
+    setInputRegion(wnd.getNativeWindowHandle(), toNativeRegions(regions));
   }
 
   setData<K extends keyof Data>(key: K, data: Data[K]): void;
@@ -473,6 +509,32 @@ export abstract class ManagedWindow<
     this.liveWindow()?.hide();
   }
 
+  /** Dismiss the bound window, bypassing the close policy. */
+  destroy(): void {
+    this.liveWindow()?.destroy();
+  }
+
+  /**
+   * Hand everything this wrapper recorded to `target`.
+   *
+   * Move semantics: the source keeps nothing, so a discarded wrapper can no
+   * longer be found by [`ManagedWindow.fromName`] or re-apply stale state.
+   * Event subscribers are not carried over; consumers follow the module's live
+   * `window` binding instead.
+   */
+  transferStateTo(target: ManagedWindow): void {
+    const merged: Record<string, unknown> = Object.create(null);
+    Object.assign(merged, target._data, this._data);
+    target._data = merged;
+    target._nativeState.postShow = this._nativeState.postShow;
+    this._data = Object.create(null);
+    this._nativeState.postShow = { inputRegions: null };
+    // A target that already has a window was bound before this state arrived,
+    // so nothing else would apply it; one without a window applies it on bind.
+    const wnd = target.liveWindow();
+    if (wnd) target.applyRecordedState(wnd);
+  }
+
   static fromBrowserWindow(browserWindow: BrowserWindow) {
     return browserManagedWindowMap.get(browserWindow);
   }
@@ -528,6 +590,14 @@ export abstract class OnDemandWindow<
     return this.windowState !== null && !this.windowState.alive;
   }
 
+  /**
+   * A pending first show counts: the window exists, it is just not on screen
+   * yet, and the show request is what a policy switch has to carry over.
+   */
+  wantsToBeVisible(): boolean {
+    return this.windowState?.alive === true;
+  }
+
   // A window that hides itself is dismissed; `show()` recreates it.
   protected onWindowHidden(): void {
     this.hide();
@@ -565,4 +635,33 @@ export abstract class OnDemandWindow<
   }
 
   abstract createWindow(state: OnDemandWindowState): BrowserWindow;
+}
+
+/**
+ * Move a window to the other lifecycle policy.
+ *
+ * The bound window is dismissed and recreated by `create`; everything the
+ * wrapper recorded (`name`, size limits, always-on-top, native input regions)
+ * moves to the replacement, and so do the position and size it currently has —
+ * a window the user moved or resized comes back where it was. A window that was
+ * on screen, or was waiting to appear, is shown again, so the switch is only
+ * visible as a re-created window, not as a disappearing one.
+ */
+export function switchWindowPolicy(
+  current: ManagedWindow | null,
+  create: () => ManagedWindow
+): ManagedWindow {
+  const bounds = current?.window?.getBounds();
+  const wasVisible = current?.wantsToBeVisible() ?? false;
+  current?.destroy();
+  const next = create();
+  current?.transferStateTo(next);
+  // After the state has moved: the replacement may have been created already.
+  if (bounds && next.window) {
+    next.window.setBounds(bounds);
+  }
+  if (wasVisible) {
+    void next.show();
+  }
+  return next;
 }
