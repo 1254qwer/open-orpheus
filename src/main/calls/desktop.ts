@@ -1,6 +1,8 @@
-import os from "node:os";
-
-import { isLayerShellAvailable } from "@open-orpheus/window";
+import {
+  DesktopEnvironment,
+  getDesktopEnvironment,
+  isLayerShellAvailable,
+} from "@open-orpheus/window";
 
 import { registerCallHandler } from "../calls";
 import MusicDesktopWindow from "../windows/music-desktop";
@@ -22,8 +24,11 @@ registerCallHandler<
     offscreen: false,
     support:
       isLayerShellAvailable() ||
-      os.platform() === "win32" ||
-      os.platform() === "darwin",
+      [
+        DesktopEnvironment.X11,
+        DesktopEnvironment.Windows,
+        DesktopEnvironment.Darwin,
+      ].includes(getDesktopEnvironment()),
   },
 ]);
 

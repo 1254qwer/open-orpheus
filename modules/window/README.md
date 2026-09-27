@@ -81,3 +81,45 @@ name the toplevel the compositor never created, so forwarding one is fatal:
   long as the client still owns its shadow object.
 
 All three behaviours were found by running a converted window against KWin.
+
+## X11 background windows
+
+`setWindowAsBackground(hwnd)` is the X11 counterpart of a Wayland background
+layer surface: on an X11 session it makes the window the bottom of the managed
+stack. It writes one property:
+
+- `_NET_WM_STATE` = `_NET_WM_STATE_BELOW` + `_NET_WM_STATE_STICKY`
+
+`_NET_WM_STATE_BELOW` is the layer directly above the window manager's own
+desktop window, which is where a wallpaper-like window belongs;
+`_NET_WM_STATE_ABOVE` is the layer above _normal_ windows, and the two states
+contradict each other, so it is never set. `_NET_WM_STATE_STICKY` keeps the
+window on every workspace, the way a background belongs to all of them.
+
+The window deliberately keeps whatever type the client gave it (Chromium sets
+`_NET_WM_WINDOW_TYPE_NORMAL`). Setting `_NET_WM_WINDOW_TYPE_DESKTOP` as well was
+tried first and does not work: the window manager owns the desktop layer itself
+and strips `_NET_WM_STATE_BELOW` from a desktop-typed window, so the property
+comes back empty and the window ends up with neither the state nor a defined
+place in the managed stack — measured on KWin with `xprop`. A normal window that
+asks to be kept below the others is the placement that actually holds.
+
+The property is written with a `ChangeProperty` request injected straight to the
+server over the window's own connection, exactly like the input region. Its type
+is `XA_ATOM` and the value words are written in the client's byte order (the
+server swaps them when the orders differ), so the request is valid on a big-endian
+client too.
+
+Everything the injection needs is interned once per connection, in the same probe
+block that interns `_NET_WM_MOVERESIZE` right after the X11 handshake
+(`_NET_WM_STATE`, `_NET_WM_STATE_BELOW` and `_NET_WM_STATE_STICKY`). A call that
+arrives before those replies have been harvested sends nothing and returns
+`false`, so the caller can retry; a window manager that does not implement EWMH
+simply ignores the property.
+
+Wayland on Linux throws instead, because the layer-shell background layer is the
+same feature there. `ManagedWindow`-based windows reach this through
+`MusicDesktopWindow`, which calls it for a non-Wayland Linux session. A
+background window is not a window _on_ the screen but the screen itself, so that
+caller also sizes the window to the display — on Wayland the layer surface's four
+anchors do that on their own, and nothing else would.

@@ -144,8 +144,25 @@ pub fn drag_window(env: Env, hwnd: Buffer) -> Result<()> {
 
 #[napi]
 pub fn set_window_as_background(env: Env, hwnd: Buffer) -> Result<()> {
-    let _ = hwnd;
-    env.throw("Linux does not support this API.")
+    if !x11::is_x11() {
+        return env.throw("This API is supported only in X11.");
+    }
+
+    if hwnd.len() < 4 {
+        return env.throw("Invalid buffer size for window handle");
+    }
+    let Some(window) = hwnd
+        .get(0..4)
+        .map(|b| u32::from_le_bytes(b.try_into().unwrap()))
+    else {
+        return env.throw("Failed to parse window handle");
+    };
+
+    if !x11::set_window_as_background(window) {
+        return env.throw("Failed to set as background window");
+    }
+
+    Ok(())
 }
 
 pub fn set_input_region(window_handle: Unknown, rects: Option<Array>) -> Result<bool> {

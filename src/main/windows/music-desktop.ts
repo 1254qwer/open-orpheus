@@ -1,7 +1,12 @@
 import { join } from "node:path";
-import os from "node:os";
 
-import { LayerShellLayer, setWindowAsBackground } from "@open-orpheus/window";
+import { screen } from "electron";
+import {
+  DesktopEnvironment,
+  getDesktopEnvironment,
+  LayerShellLayer,
+  setWindowAsBackground,
+} from "@open-orpheus/window";
 
 import { ManagedWindow } from "../window";
 import { isAppUrl } from "../util";
@@ -32,14 +37,32 @@ export default class MusicDesktopWindow extends ManagedWindow {
       );
     }
     this.setWindowInputRegion([]);
-    if (os.platform() === "win32" || os.platform() === "darwin")
+
+    if (
+      [
+        DesktopEnvironment.X11,
+        DesktopEnvironment.Windows,
+        DesktopEnvironment.Darwin,
+      ].includes(getDesktopEnvironment())
+    ) {
+      const setBounds = () => wnd.setBounds(screen.getPrimaryDisplay().bounds);
+      setBounds();
+      screen.addListener("display-added", setBounds);
+      screen.addListener("display-metrics-changed", setBounds);
+      screen.addListener("display-removed", setBounds);
+      wnd.addListener("closed", () => {
+        screen.removeListener("display-added", setBounds);
+        screen.removeListener("display-metrics-changed", setBounds);
+        screen.removeListener("display-removed", setBounds);
+      });
       try {
         setWindowAsBackground(wnd.getNativeWindowHandle());
       } catch (e) {
-        // Destroy the window and rethrow
-        this.destroy();
+        // Destroy the window and rethrow, deferred so attaching won't crash.
+        setImmediate(() => this.destroy());
         throw e;
       }
+    }
   }
 
   protected beforeSurfaceCreated(): void {

@@ -610,6 +610,8 @@ registerCallHandler<[string, "autorun"], [boolean]>(
   (event, appName) => {
     switch (appName) {
       case "cloudmusic": {
+        // Setting autorun in dev is unsupported
+        if (!app.isPackaged) return [false];
         if (os.platform() === "linux") {
           // Not supported on Linux，show a dialog to provide
           // information on enabling main program's autorun
