@@ -77,6 +77,19 @@ pub(crate) fn filter(
     {
         let conns = CONNS.get();
         let mut guard = conns.and_then(|m| m.lock().ok());
+        // Answers a request handler owes the client (a decoration configure for
+        // a window the compositor has no toplevel for) go out first. Only when
+        // this chunk produced messages: a chunk that is part of a message emits
+        // nothing, and the answers queued here have to survive until a chunk
+        // that does.
+        if is_event
+            && had_complete_msgs
+            && let Some(conn) = guard.as_mut().and_then(|g| g.get_mut(&fd))
+        {
+            for message in std::mem::take(&mut conn.pending_to_client) {
+                out.extend_from_slice(&message);
+            }
+        }
         for msg in &msgs {
             let action = if let Some(conn) = guard.as_mut().and_then(|g| g.get_mut(&fd)) {
                 if is_event {
@@ -91,6 +104,12 @@ pub(crate) fn filter(
             match action {
                 Action::Forward => out.extend_from_slice(msg.raw()),
                 Action::Suppress => {}
+                // Emitted in the original's place, so ordering is exact.
+                Action::Replace(messages) => {
+                    for message in messages {
+                        out.extend_from_slice(&message);
+                    }
+                }
             }
         }
     }
@@ -107,6 +126,9 @@ pub(crate) fn filter(
     }
     if let Some(wl_surface_id) = fx.arm_watchers_for {
         arm_first_cursor_enter_watchers(fd, wl_surface_id);
+    }
+    if let Some(window_id) = fx.layer_shell_refused {
+        fire_layer_shell_refused(window_id);
     }
 
     // ── Ancillary data + output assembly (unchanged semantics) ──
@@ -363,6 +385,39 @@ mod tests {
         // Everything else still goes through.
         let normal = message_bytes(3, 1, &[1, 2, 3, 4]);
         assert_eq!(conn.take(Direction::Inbound, &normal).data, normal);
+    }
+
+    #[test]
+    fn answers_owed_to_the_client_survive_a_chunk_without_a_whole_message() {
+        init_state();
+        let conn = Conn::new();
+        conn.register();
+
+        // A decoration configure the proxy owes the client.
+        let owed = vec![9u8, 0, 0, 0, 12, 0, 0, 0, 1, 0, 0, 0];
+        CONNS
+            .get()
+            .expect("initialised")
+            .lock()
+            .unwrap()
+            .get_mut(&conn.fd())
+            .expect("a connection")
+            .pending_to_client
+            .push(owed.clone());
+
+        // Half a message: nothing is emitted, and nothing may be dropped.
+        let bytes = message_bytes(1, 0, &[]);
+        let (head, tail) = bytes.split_at(4);
+        assert!(conn.take(Direction::Inbound, head).data.is_empty());
+        assert_eq!(
+            conn.with_conn(|c| c.pending_to_client.len()),
+            1,
+            "still queued"
+        );
+
+        // The rest of the message flushes it, ahead of what it carries.
+        let flushed = conn.take(Direction::Inbound, tail);
+        assert_eq!(&flushed.data[..owed.len()], owed.as_slice());
     }
 
     #[test]

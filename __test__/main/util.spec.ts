@@ -16,6 +16,7 @@ import {
   checkEnvFlagPresent,
   fileExists,
   getWindowScaleFactor,
+  isAppUrl,
   isFileNotFound,
   isMusicFile,
   normalizePath,
@@ -187,5 +188,25 @@ describe("getWindowScaleFactor", () => {
   it("reports the scale factor of the matching display", () => {
     const wnd = { getBounds: () => ({ x: 0, y: 0, width: 100, height: 100 }) };
     expect(getWindowScaleFactor(wnd as never)).toBe(2);
+  });
+});
+
+describe("isAppUrl", () => {
+  it("accepts the application's own content", () => {
+    expect(isAppUrl("orpheus://orpheus/")).toBe(true);
+    expect(isAppUrl("orpheus://orpheus/index.html?v=2")).toBe(true);
+  });
+
+  it("refuses the cached remote content the same scheme also serves", () => {
+    // `orpheus://cache?<url>` fetches and returns remote bodies, so a page
+    // loaded that way would run with the application preload.
+    expect(isAppUrl("orpheus://cache?https://evil.example/x.html")).toBe(false);
+  });
+
+  it("refuses anything that is not the application's own content", () => {
+    expect(isAppUrl("https://evil.example/x.html")).toBe(false);
+    expect(isAppUrl("file:///etc/passwd")).toBe(false);
+    expect(isAppUrl("orpheus://orpheus.evil.example/")).toBe(false);
+    expect(isAppUrl("not a url")).toBe(false);
   });
 });

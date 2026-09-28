@@ -12,12 +12,13 @@ import {
 import { registerCallHandler } from "../calls";
 import { loadFromOrpheusUrl } from "../orpheus";
 import { getWindowScaleFactor, pngFromIco } from "../util";
-import { mainWindow, ManagedWindow } from "../window";
+import { BasicManagedWindow, mainWindow, ManagedWindow } from "../window";
 import AppMenu from "../menu";
 import { registerGlobalShortcut, unregisterGlobalShortcut } from "../shortcuts";
 import * as settings from "../settings";
 import { LifecycleState, setLifecycleState } from "../lifecycle";
 import showManageWindow from "../windows/manage";
+import MusicDesktopWindow from "../windows/music-desktop";
 
 function shouldApplyScaleFactor() {
   const de = getDesktopEnvironment();
@@ -72,7 +73,12 @@ registerCallHandler<
 registerCallHandler<[string], void>(
   "winhelper.setWindowTitle",
   (event, title) => {
-    BrowserWindow.fromWebContents(event.sender)?.setTitle(title);
+    // Through the wrapper: the native layer keys the window on the id that
+    // rides in its title, so a title written straight to the window would drop
+    // the name the window is known by.
+    const wnd = BrowserWindow.fromWebContents(event.sender);
+    const managed = wnd ? ManagedWindow.fromBrowserWindow(wnd) : null;
+    managed?.setTitle(title);
   }
 );
 
@@ -112,6 +118,9 @@ registerCallHandler<[WindowPosition], void>(
   (event, { width, height, x, y, topmost }) => {
     const wnd = BrowserWindow.fromWebContents(event.sender);
     if (!wnd) return;
+    const managedWindow = ManagedWindow.fromBrowserWindow(wnd);
+    // Ignore requests from music desktop window
+    if (managedWindow instanceof MusicDesktopWindow) return;
     const scaleFactor = shouldApplyScaleFactor()
       ? getWindowScaleFactor(wnd)
       : 1;
@@ -245,7 +254,7 @@ type WindowAttributes = {
 registerCallHandler<[string, WindowDimensions, WindowAttributes], [boolean]>(
   "winhelper.launchWindow",
   (event, url, dimensions, attributes) => {
-    const wnd = new BrowserWindow({
+    const wnd = new BasicManagedWindow({
       width: dimensions.width,
       height: dimensions.height,
       resizable: attributes.resizable,
@@ -256,8 +265,8 @@ registerCallHandler<[string, WindowDimensions, WindowAttributes], [boolean]>(
       webPreferences: {
         preload: path.join(import.meta.dirname, "preload.js"),
       },
-    });
-    wnd.loadURL(url);
+    }).window;
+    if (wnd) void wnd.loadURL(url);
     return [true];
   }
 );
