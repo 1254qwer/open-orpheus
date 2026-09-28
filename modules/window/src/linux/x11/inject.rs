@@ -984,7 +984,7 @@ mod tests {
             feed_inbound(fd, &pointer_reply(seq, -7, 9), None)
                 .expect("never tears down")
                 .data,
-            Vec::new(),
+            Vec::<u8>::new(),
             "the reply is dropped rather than forwarded"
         );
 
