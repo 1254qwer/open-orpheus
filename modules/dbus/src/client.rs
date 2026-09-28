@@ -397,6 +397,22 @@ impl DbusClient {
                 .await;
                 if cancelled {
                     break;
+                match smol::future::or(stream.next(), stopped).await {
+                    Some(Ok(message)) => {
+                        let signal = match signal_from_message(&message) {
+                            Ok(signal) => signal,
+                            // A signal we cannot represent in JS is skipped
+                            // rather than allowed to end the subscription.
+                            Err(_) => continue,
+                        };
+                        if let Ok(NapiEither::A(promise)) = handler.call_async(Ok(signal)).await {
+                            let _ = promise.await;
+                        }
+                    }
+                    // `None` means the subscription was stopped, `Some(Err(_))`
+                    // that the stream failed or ended; the connection closing
+                    // also ends the stream.
+                    _ => break,
                 }
             }
         })
