@@ -195,10 +195,6 @@ fn dict_to_json(dict: &Dict<'_, '_>) -> Result<Json, String> {
                 _ => return Err("dictionary key is not a string".to_string()),
             };
             object.insert(key, value_to_json(value)?);
-            let Value::Str(key) = key else {
-                return Err("dictionary key is not a string".to_string());
-            };
-            object.insert(key.as_str().to_owned(), value_to_json(value)?);
         }
         Ok(Json::Object(object))
     } else {
@@ -377,7 +373,6 @@ fn expect_i64(json: &Json, signature: &Signature, index: usize) -> Result<i64, S
         // 2^63 is not representable as an `i64` and casting it would saturate
         // to `i64::MAX` while accepting a value the caller never passed.
         if value.fract() == 0.0 && value >= i64::MIN as f64 && value < i64::MAX as f64 {
-        if value.fract() == 0.0 && (i64::MIN as f64..=i64::MAX as f64).contains(&value) {
             return Ok(value as i64);
         }
         return Err(format!(
@@ -395,7 +390,6 @@ fn expect_u64(json: &Json, signature: &Signature, index: usize) -> Result<u64, S
         // As above, `u64::MAX as f64` is 2^64, so the upper bound is
         // exclusive: casting 2^64 would saturate to `u64::MAX`.
         if value.fract() == 0.0 && value >= 0.0 && value < u64::MAX as f64 {
-        if value.fract() == 0.0 && (0.0..=u64::MAX as f64).contains(&value) {
             return Ok(value as u64);
         }
         return Err(format!(
