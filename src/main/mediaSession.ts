@@ -1,7 +1,7 @@
 import os from "node:os";
 
 import { toError } from "../util";
-import { events as lifecycleEvents } from "./lifecycle";
+import { events as lifecycleEvents, registerShutdownTask } from "./lifecycle";
 import { resolveCoverUrl } from "./playback/artwork";
 import PlaybackController from "./playback/PlaybackController";
 import { PlaybackChange, TrackInfo } from "./playback/types";
@@ -113,6 +113,25 @@ export async function createMediaSession(): Promise<void> {
   );
   playbackController.on("ratechanged", ({ data }) => adapter.onRate(data));
   playbackController.on("volumechanged", ({ data }) => adapter.onVolume(data));
+
+  registerShutdownTask({ name: "media-session", run: disposeMediaSession });
+}
+
+/**
+ * Release the platform media session (e.g. the MPRIS D-Bus name) at shutdown.
+ *
+ * The adapter is created by {@link createMediaSession}, so when loading it
+ * failed the no-op adapter is still in place and this does nothing.
+ */
+export function disposeMediaSession(): void {
+  try {
+    adapter.dispose();
+  } catch (err) {
+    LOGGER.warn(
+      { err: toError(err) },
+      "Failed to dispose the media session adapter"
+    );
+  }
 }
 
 // Frozen seams: `player.setInfo` (registerCallHandler) calls `setMetadata`;

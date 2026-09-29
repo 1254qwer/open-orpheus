@@ -267,6 +267,22 @@ stream.addListener("error", (e) => {
 
 const logger = pino(stream);
 
+/**
+ * Flush records still buffered in the log transport's worker.
+ *
+ * The transport writes from a worker thread, so records can still be in flight
+ * when the process starts to exit. Synchronous on purpose: it has to work from
+ * the shutdown path, where there is no time left to await anything.
+ */
+export function flushLogs(): void {
+  try {
+    stream.flushSync();
+  } catch (err) {
+    // Logging is best effort — never let it keep the app from exiting.
+    console.error("Failed to flush logs:", err);
+  }
+}
+
 ipcMain.on(
   "logger.log",
   (event, level: string, bindings, ...args: Parameters<LogFn>) => {

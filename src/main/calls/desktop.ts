@@ -5,10 +5,21 @@ import {
 } from "@open-orpheus/window";
 
 import { registerCallHandler } from "../calls";
+import { registerShutdownTask } from "../lifecycle";
 import MusicDesktopWindow from "../windows/music-desktop";
 import { isAppUrl } from "../util";
 
 export let musicDesktopWindow: MusicDesktopWindow | null = null;
+
+// The window is destroyed with the app rather than left to Electron, which does
+// not close it reliably on macOS.
+registerShutdownTask({
+  name: "music-desktop",
+  run: () => {
+    musicDesktopWindow?.destroy();
+    musicDesktopWindow = null;
+  },
+});
 
 // 乐评桌面支持
 registerCallHandler<

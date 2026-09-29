@@ -558,6 +558,41 @@ describe("OnDemandWindow recreation", () => {
   });
 });
 
+describe("OnDemandWindow hiding", () => {
+  /** Show the window and return its live surface. */
+  async function showOnDemand(managed: TestOnDemandWindow) {
+    const show = managed.show();
+    const wnd = asFake(managed.window);
+    wnd.emit("ready-to-show");
+    await show;
+    return wnd;
+  }
+
+  it("destroys and unbinds when it hides itself normally", async () => {
+    const managed = new TestOnDemandWindow();
+    const wnd = await showOnDemand(managed);
+
+    // A raw hide still goes through the wrapper: the window is dismissed.
+    wnd.hide();
+
+    expect(wnd.destroyed).toBe(true);
+    expect(managed.window).toBeNull();
+  });
+
+  it("stays bound while the app is quitting", async () => {
+    const managed = new TestOnDemandWindow();
+    const wnd = await showOnDemand(managed);
+
+    hoisted.lifecycle.state = 4; // LifecycleState.Quitting
+    wnd.hide();
+
+    // The window is only off screen: a shutdown task may still need its
+    // renderer, so it must not be destroyed or unbound.
+    expect(wnd.destroyed).toBe(false);
+    expect(managed.window).toBe(wnd);
+  });
+});
+
 describe("switchWindowPolicy", () => {
   it("dismisses the old window and moves the recorded state", () => {
     const managed = new TestWindow();
