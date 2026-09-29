@@ -42,6 +42,11 @@ jobs:
           toolchain: ${{ vars.RUST_VERSION || 'stable' }}
           target: wasm32-unknown-unknown
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libfreetype-dev
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
