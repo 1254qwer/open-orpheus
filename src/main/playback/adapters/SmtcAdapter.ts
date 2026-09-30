@@ -1,6 +1,6 @@
 import Emittery from "emittery";
 
-import { MediaSession } from "@open-orpheus/smtc";
+import { MediaSession } from "@open-orpheus/system-win32";
 import { nativeArtUrl } from "../artwork";
 import { PlaybackStatus, TrackInfo } from "../types";
 import {
@@ -11,7 +11,7 @@ import {
 // SMTC uses 100 ns ticks; we use seconds.
 const TIME_RATIO = 10_000_000;
 
-/** Windows SMTC integration, backed by the `@open-orpheus/smtc` NAPI module. */
+/** Windows SMTC integration, backed by the `@open-orpheus/system-win32` NAPI module. */
 export default class SmtcAdapter
   extends Emittery<PlayerCommandEvents>
   implements MediaSessionAdapter

@@ -97,6 +97,7 @@ export function setLifecycleState<K extends LifecycleState>(
 
 const SHUTDOWN_DEADLINE_MS = 5000;
 const DEFAULT_TASK_TIMEOUT_MS = 1500;
+const FINALIZER_TIMEOUT_MS = 1000;
 
 export interface LifecycleOptions {
   /**
@@ -108,10 +109,16 @@ export interface LifecycleOptions {
   shutdownDeadlineMs?: number;
   /** Default per-task timeout, in milliseconds. */
   taskTimeoutMs?: number;
+  /**
+   * Per-finalizer timeout, in milliseconds. Finalizers are outside the shutdown
+   * deadline, so this is the only bound they have.
+   */
+  finalizerTimeoutMs?: number;
 }
 
 let shutdownDeadlineMs = SHUTDOWN_DEADLINE_MS;
 let defaultTaskTimeoutMs = DEFAULT_TASK_TIMEOUT_MS;
+let finalizerTimeoutMs = FINALIZER_TIMEOUT_MS;
 
 export interface ShutdownTask {
   /** Stable identifier, used for logging only. */
@@ -138,6 +145,38 @@ let lifecycleInstalled = false;
  */
 export function registerShutdownTask(task: ShutdownTask): void {
   shutdownTasks.push(task);
+}
+
+/**
+ * A last action that must happen however the tasks went.
+ *
+ * The deadline above exists so that quitting stays bounded, which means a slow
+ * task can skip the tasks behind it. For work that is the *point* of the
+ * shutdown rather than cleanup — powering the machine off at the end of an
+ * auto-exit countdown, say — being skipped silently turns the feature into a
+ * lie, so it is registered here instead: finalizers run after every task and
+ * after the log buffer is flushed, and the overall deadline does not apply to
+ * them.
+ */
+export interface ShutdownFinalizer {
+  /** Stable identifier, used for logging only. */
+  name: string;
+  /**
+   * The work to run. Keep it quick and self-contained: everything else is
+   * already done by this point, and it is bounded only by `finalizerTimeoutMs`.
+   */
+  run: () => void | Promise<void>;
+}
+
+const shutdownFinalizers: ShutdownFinalizer[] = [];
+
+/**
+ * Register a finalizer, described by {@link ShutdownFinalizer}.
+ *
+ * They run in reverse registration order, like the tasks.
+ */
+export function registerShutdownFinalizer(finalizer: ShutdownFinalizer): void {
+  shutdownFinalizers.push(finalizer);
 }
 
 /**
@@ -230,6 +269,43 @@ async function runShutdownTasks(): Promise<void> {
 
   // Last, so everything above is captured.
   await flushLogBuffer();
+
+  // Whatever the tasks did — including using up the whole deadline — these still
+  // run, because by now they are the only thing left that matters.
+  await runShutdownFinalizers();
+}
+
+/**
+ * Run every finalizer, whatever the tasks did.
+ *
+ * Each one gets `finalizerTimeoutMs` of its own rather than a share of the
+ * shutdown deadline, which by now may be long gone: a finalizer that is skipped
+ * is a promise the shutdown broke.
+ */
+async function runShutdownFinalizers(): Promise<void> {
+  for (const finalizer of [...shutdownFinalizers].reverse()) {
+    const signal = AbortSignal.timeout(finalizerTimeoutMs);
+
+    try {
+      const outcome = await Promise.race([
+        Promise.resolve(finalizer.run()).then(() => "done" as const),
+        onceAborted(signal).then(() => "expired" as const),
+      ]);
+
+      if (outcome === "expired") {
+        LOGGER.warn(
+          { finalizer: finalizer.name },
+          `Shutdown finalizer timed out`
+        );
+      }
+    } catch (e) {
+      // One failing finalizer must not stop the rest.
+      LOGGER.error(
+        { err: toError(e), finalizer: finalizer.name },
+        `Shutdown finalizer failed`
+      );
+    }
+  }
 }
 
 function exitNow(code: number): void {
@@ -255,6 +331,7 @@ export function installLifecycle(options: LifecycleOptions = {}): void {
 
   shutdownDeadlineMs = options.shutdownDeadlineMs ?? SHUTDOWN_DEADLINE_MS;
   defaultTaskTimeoutMs = options.taskTimeoutMs ?? DEFAULT_TASK_TIMEOUT_MS;
+  finalizerTimeoutMs = options.finalizerTimeoutMs ?? FINALIZER_TIMEOUT_MS;
 
   app.on("window-all-closed", () => {
     // Make sure we don't quit because of package download window being closed

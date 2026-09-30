@@ -20,6 +20,7 @@ import {
   hasManagedScheduledShutdown,
   keepScheduledShutdownOnExit,
   ScheduleShutdownStatus,
+  setPowerOffFailureHandler,
   setScheduledShutdown,
 } from "../shutdown";
 
@@ -147,6 +148,17 @@ registerCallHandler<
     }
   }
 );
+
+// The auto-exit countdown's last act is a power-off (Windows) that the system can
+// still refuse at the deadline, and the user has to learn that the machine is
+// staying on. It is reported here because this is the layer that can say so in
+// words; the request itself is made while the app is already quitting.
+setPowerOffFailureHandler(() => {
+  new Notification({
+    title: "Open Orpheus",
+    body: "定时关机失败，电脑将不会自动关机，请手动关机",
+  }).show();
+});
 
 async function disableScheduledShutdown() {
   // Nothing was scheduled by this app, so there is nothing to cancel — and

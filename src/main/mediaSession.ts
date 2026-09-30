@@ -80,8 +80,8 @@ export async function createMediaSession(): Promise<void> {
       );
       break;
     case "win32":
-      // `@open-orpheus/smtc` is a Windows-only native module, so it is only
-      // loaded on this platform (kept out of other platform bundles).
+      // `@open-orpheus/system-win32` is a Windows-only native module, so it is
+      // only loaded on this platform (kept out of other platform bundles).
       adapter = await loadAdapter(
         () => import("./playback/adapters/SmtcAdapter"),
         "SMTC"

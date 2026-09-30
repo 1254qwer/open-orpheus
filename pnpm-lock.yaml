@@ -229,9 +229,9 @@ importers:
       '@open-orpheus/nowplaying':
         specifier: workspace:*
         version: link:modules/nowplaying
-      '@open-orpheus/smtc':
+      '@open-orpheus/system-win32':
         specifier: workspace:*
-        version: link:modules/smtc
+        version: link:modules/sys-win32
 
   gui:
     devDependencies:
@@ -412,7 +412,7 @@ importers:
         specifier: ^6.0.0
         version: 6.0.3
 
-  modules/smtc:
+  modules/sys-win32:
     devDependencies:
       '@emnapi/core':
         specifier: ^1.11.3

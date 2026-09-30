@@ -370,6 +370,113 @@ describe("shutdown tasks", () => {
   });
 });
 
+// Finalizers exist because a task can be skipped once the deadline is reached,
+// and some work is the point of the shutdown rather than cleanup: skipping it
+// silently leaves the user's request unfulfilled.
+describe("shutdown finalizers", () => {
+  it("runs finalizers even when the deadline skipped the tasks", async () => {
+    const ran: string[] = [];
+    const lifecycle = await freshLifecycle({
+      shutdownDeadlineMs: 60,
+      taskTimeoutMs: 1000,
+    });
+
+    // Registered first, so it is the last task to run — and never gets to.
+    lifecycle.registerShutdownTask({
+      name: "skipped",
+      run: () => {
+        ran.push("skipped");
+      },
+    });
+    // Registered last, so it runs first and takes the deadline with it.
+    lifecycle.registerShutdownTask({
+      name: "hung",
+      run: () => new Promise<void>(() => {}),
+    });
+    lifecycle.registerShutdownFinalizer({
+      name: "power-off",
+      run: () => {
+        ran.push("power-off");
+      },
+    });
+
+    await quit();
+
+    expect(ran).toEqual(["power-off"]);
+  });
+
+  it("runs finalizers after the log flush", async () => {
+    const order: string[] = [];
+    const lifecycle = await freshLifecycle();
+    hoisted.flushLogs.mockImplementation(() => {
+      order.push("flush");
+    });
+
+    lifecycle.registerShutdownTask({
+      name: "task",
+      run: () => {
+        order.push("task");
+      },
+    });
+    lifecycle.registerShutdownFinalizer({
+      name: "power-off",
+      run: () => {
+        order.push("power-off");
+      },
+    });
+
+    await quit();
+
+    expect(order).toEqual(["task", "flush", "power-off"]);
+  });
+
+  it("keeps running the other finalizers when one fails", async () => {
+    const ran: string[] = [];
+    const lifecycle = await freshLifecycle();
+
+    // LIFO: `boom` runs first, `after` still gets its turn.
+    lifecycle.registerShutdownFinalizer({
+      name: "after",
+      run: () => {
+        ran.push("after");
+      },
+    });
+    lifecycle.registerShutdownFinalizer({
+      name: "boom",
+      run: () => {
+        throw new Error("boom");
+      },
+    });
+
+    await quit();
+
+    expect(ran).toEqual(["after"]);
+  });
+
+  it("abandons a hung finalizer at its own timeout", async () => {
+    const ran: string[] = [];
+    const lifecycle = await freshLifecycle({ finalizerTimeoutMs: 20 });
+
+    // LIFO: `hung` runs first.
+    lifecycle.registerShutdownFinalizer({
+      name: "after",
+      run: () => {
+        ran.push("after");
+      },
+    });
+    lifecycle.registerShutdownFinalizer({
+      name: "hung",
+      run: () => new Promise<void>(() => {}),
+    });
+
+    const startedAt = Date.now();
+    await quit();
+
+    expect(ran).toEqual(["after"]);
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(15);
+  });
+});
+
 describe("installLifecycle", () => {
   it("is idempotent", async () => {
     const lifecycle = await freshLifecycle();

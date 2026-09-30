@@ -2,7 +2,7 @@
 [package]
 authors = ["YUCLing <luotianyi@luotianyi.me>"]
 edition = "2021"
-name    = "smtc"
+name    = "sys-win32"
 version = "0.1.0"
 
 [lib]
@@ -18,7 +18,11 @@ features = [
     "Media",
     "Media_Playback",
     "Foundation",
-    "Storage_Streams"
+    "Storage_Streams",
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Shutdown",
+    "Win32_System_Threading"
 ]
 
 [build-dependencies]
