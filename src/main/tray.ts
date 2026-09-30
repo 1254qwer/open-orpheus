@@ -11,6 +11,7 @@ import {
 } from "electron";
 
 import { mainWindow } from "./window";
+import { registerShutdownTask } from "./lifecycle";
 import { kv as settings } from "./settings";
 import showManageWindow from "./windows/manage";
 
@@ -173,3 +174,10 @@ export function uninstall() {
   trayIcon.setContextMenu(Menu.buildFromTemplate(defaultMenuItems));
   trayInstalled = false;
 }
+
+/** Destroy the tray icon on shutdown. */
+export function destroyTray() {
+  trayIcon.destroy();
+}
+
+registerShutdownTask({ name: "tray", run: destroyTray });

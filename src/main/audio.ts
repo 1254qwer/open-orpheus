@@ -7,7 +7,7 @@ import mime from "mime";
 import type { AudioPlayInfo } from "../preload/Player";
 import { sanitizeRelativePath } from "./util";
 import { data as dataDir, pack as packageDir } from "./folders";
-import { events as lifecycleEvents } from "./lifecycle";
+import { events as lifecycleEvents, registerShutdownTask } from "./lifecycle";
 import { kv as settings } from "./settings";
 import { toError } from "../util";
 import { decodeNcae } from "./ncae";
@@ -28,6 +28,18 @@ import { isAv3aFile } from "./av3a/detect";
  */
 const mediaEngine = new MediaEngine();
 const av3aEngine = new Av3aEngine();
+
+/**
+ * Stop both engines and wait for the media engine's streamer to delete its temp
+ * file. Without this the file is only reclaimed by the next launch's cleanup.
+ */
+registerShutdownTask({
+  name: "audio-engines",
+  run: async () => {
+    await av3aEngine.stop();
+    await mediaEngine.dispose();
+  },
+});
 
 export async function readEffect(pathInfo: { path: string; pathtype: number }) {
   if (pathInfo.pathtype !== 2) {

@@ -16,9 +16,20 @@ import { KeyvSqlite } from "@keyv/sqlite";
 import { SettingsEvents } from "$sharedTypes/settings";
 import createKeyvSqliteDriver from "./database/KeyvSqliteDriver";
 import { nativeDb } from "./database";
+import { registerShutdownTask } from "./lifecycle";
 
 export let kv: Keyv;
 export let events: Emittery<SettingsEvents>;
+
+// Close the settings store on shutdown. Registered here rather than in
+// `initialize` so it can only ever be added once.
+registerShutdownTask({
+  name: "settings-store",
+  timeoutMs: 1000,
+  run: async () => {
+    await kv?.disconnect();
+  },
+});
 
 export function initialize() {
   kv = new Keyv({

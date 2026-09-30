@@ -70,13 +70,13 @@ function requireNative() {
   } else if (process.platform === 'android') {
     if (process.arch === 'arm64') {
       try {
-        return require('./smtc.android-arm64.node')
+        return require('./sys.android-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-android-arm64')
-        const bindingPackageVersion = require('@open-orpheus/smtc-android-arm64/package.json').version
+        const binding = require('@open-orpheus/system-win32-android-arm64')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-android-arm64/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -86,13 +86,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm') {
       try {
-        return require('./smtc.android-arm-eabi.node')
+        return require('./sys.android-arm-eabi.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-android-arm-eabi')
-        const bindingPackageVersion = require('@open-orpheus/smtc-android-arm-eabi/package.json').version
+        const binding = require('@open-orpheus/system-win32-android-arm-eabi')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-android-arm-eabi/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -107,13 +107,13 @@ function requireNative() {
     if (process.arch === 'x64') {
       if ((process.config && process.config.variables && process.config.variables.shlib_suffix === 'dll.a') || (process.config && process.config.variables && process.config.variables.node_target_type === 'shared_library')) {
         try {
-        return require('./smtc.win32-x64-gnu.node')
+        return require('./sys.win32-x64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-win32-x64-gnu')
-        const bindingPackageVersion = require('@open-orpheus/smtc-win32-x64-gnu/package.json').version
+        const binding = require('@open-orpheus/system-win32-win32-x64-gnu')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-win32-x64-gnu/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -123,13 +123,13 @@ function requireNative() {
       }
       } else {
         try {
-        return require('./smtc.win32-x64-msvc.node')
+        return require('./sys.win32-x64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-win32-x64-msvc')
-        const bindingPackageVersion = require('@open-orpheus/smtc-win32-x64-msvc/package.json').version
+        const binding = require('@open-orpheus/system-win32-win32-x64-msvc')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-win32-x64-msvc/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -140,13 +140,13 @@ function requireNative() {
       }
     } else if (process.arch === 'ia32') {
       try {
-        return require('./smtc.win32-ia32-msvc.node')
+        return require('./sys.win32-ia32-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-win32-ia32-msvc')
-        const bindingPackageVersion = require('@open-orpheus/smtc-win32-ia32-msvc/package.json').version
+        const binding = require('@open-orpheus/system-win32-win32-ia32-msvc')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-win32-ia32-msvc/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -156,13 +156,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./smtc.win32-arm64-msvc.node')
+        return require('./sys.win32-arm64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-win32-arm64-msvc')
-        const bindingPackageVersion = require('@open-orpheus/smtc-win32-arm64-msvc/package.json').version
+        const binding = require('@open-orpheus/system-win32-win32-arm64-msvc')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-win32-arm64-msvc/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -175,13 +175,13 @@ function requireNative() {
     }
   } else if (process.platform === 'darwin') {
     try {
-      return require('./smtc.darwin-universal.node')
+      return require('./sys.darwin-universal.node')
     } catch (e) {
       loadErrors.push(e)
     }
     try {
-      const binding = require('@open-orpheus/smtc-darwin-universal')
-      const bindingPackageVersion = require('@open-orpheus/smtc-darwin-universal/package.json').version
+      const binding = require('@open-orpheus/system-win32-darwin-universal')
+      const bindingPackageVersion = require('@open-orpheus/system-win32-darwin-universal/package.json').version
       if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
         throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
       }
@@ -191,13 +191,13 @@ function requireNative() {
     }
     if (process.arch === 'x64') {
       try {
-        return require('./smtc.darwin-x64.node')
+        return require('./sys.darwin-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-darwin-x64')
-        const bindingPackageVersion = require('@open-orpheus/smtc-darwin-x64/package.json').version
+        const binding = require('@open-orpheus/system-win32-darwin-x64')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-darwin-x64/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -207,13 +207,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./smtc.darwin-arm64.node')
+        return require('./sys.darwin-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-darwin-arm64')
-        const bindingPackageVersion = require('@open-orpheus/smtc-darwin-arm64/package.json').version
+        const binding = require('@open-orpheus/system-win32-darwin-arm64')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-darwin-arm64/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -227,13 +227,13 @@ function requireNative() {
   } else if (process.platform === 'freebsd') {
     if (process.arch === 'x64') {
       try {
-        return require('./smtc.freebsd-x64.node')
+        return require('./sys.freebsd-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-freebsd-x64')
-        const bindingPackageVersion = require('@open-orpheus/smtc-freebsd-x64/package.json').version
+        const binding = require('@open-orpheus/system-win32-freebsd-x64')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-freebsd-x64/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -243,13 +243,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./smtc.freebsd-arm64.node')
+        return require('./sys.freebsd-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-freebsd-arm64')
-        const bindingPackageVersion = require('@open-orpheus/smtc-freebsd-arm64/package.json').version
+        const binding = require('@open-orpheus/system-win32-freebsd-arm64')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-freebsd-arm64/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -264,13 +264,13 @@ function requireNative() {
     if (process.arch === 'x64') {
       if (isMusl()) {
         try {
-          return require('./smtc.linux-x64-musl.node')
+          return require('./sys.linux-x64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@open-orpheus/smtc-linux-x64-musl')
-          const bindingPackageVersion = require('@open-orpheus/smtc-linux-x64-musl/package.json').version
+          const binding = require('@open-orpheus/system-win32-linux-x64-musl')
+          const bindingPackageVersion = require('@open-orpheus/system-win32-linux-x64-musl/package.json').version
           if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -280,13 +280,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./smtc.linux-x64-gnu.node')
+          return require('./sys.linux-x64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@open-orpheus/smtc-linux-x64-gnu')
-          const bindingPackageVersion = require('@open-orpheus/smtc-linux-x64-gnu/package.json').version
+          const binding = require('@open-orpheus/system-win32-linux-x64-gnu')
+          const bindingPackageVersion = require('@open-orpheus/system-win32-linux-x64-gnu/package.json').version
           if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -298,13 +298,13 @@ function requireNative() {
     } else if (process.arch === 'arm64') {
       if (isMusl()) {
         try {
-          return require('./smtc.linux-arm64-musl.node')
+          return require('./sys.linux-arm64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@open-orpheus/smtc-linux-arm64-musl')
-          const bindingPackageVersion = require('@open-orpheus/smtc-linux-arm64-musl/package.json').version
+          const binding = require('@open-orpheus/system-win32-linux-arm64-musl')
+          const bindingPackageVersion = require('@open-orpheus/system-win32-linux-arm64-musl/package.json').version
           if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -314,13 +314,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./smtc.linux-arm64-gnu.node')
+          return require('./sys.linux-arm64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@open-orpheus/smtc-linux-arm64-gnu')
-          const bindingPackageVersion = require('@open-orpheus/smtc-linux-arm64-gnu/package.json').version
+          const binding = require('@open-orpheus/system-win32-linux-arm64-gnu')
+          const bindingPackageVersion = require('@open-orpheus/system-win32-linux-arm64-gnu/package.json').version
           if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -332,13 +332,13 @@ function requireNative() {
     } else if (process.arch === 'arm') {
       if (isMusl()) {
         try {
-          return require('./smtc.linux-arm-musleabihf.node')
+          return require('./sys.linux-arm-musleabihf.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@open-orpheus/smtc-linux-arm-musleabihf')
-          const bindingPackageVersion = require('@open-orpheus/smtc-linux-arm-musleabihf/package.json').version
+          const binding = require('@open-orpheus/system-win32-linux-arm-musleabihf')
+          const bindingPackageVersion = require('@open-orpheus/system-win32-linux-arm-musleabihf/package.json').version
           if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -348,13 +348,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./smtc.linux-arm-gnueabihf.node')
+          return require('./sys.linux-arm-gnueabihf.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@open-orpheus/smtc-linux-arm-gnueabihf')
-          const bindingPackageVersion = require('@open-orpheus/smtc-linux-arm-gnueabihf/package.json').version
+          const binding = require('@open-orpheus/system-win32-linux-arm-gnueabihf')
+          const bindingPackageVersion = require('@open-orpheus/system-win32-linux-arm-gnueabihf/package.json').version
           if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -366,13 +366,13 @@ function requireNative() {
     } else if (process.arch === 'loong64') {
       if (isMusl()) {
         try {
-          return require('./smtc.linux-loong64-musl.node')
+          return require('./sys.linux-loong64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@open-orpheus/smtc-linux-loong64-musl')
-          const bindingPackageVersion = require('@open-orpheus/smtc-linux-loong64-musl/package.json').version
+          const binding = require('@open-orpheus/system-win32-linux-loong64-musl')
+          const bindingPackageVersion = require('@open-orpheus/system-win32-linux-loong64-musl/package.json').version
           if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -382,13 +382,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./smtc.linux-loong64-gnu.node')
+          return require('./sys.linux-loong64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@open-orpheus/smtc-linux-loong64-gnu')
-          const bindingPackageVersion = require('@open-orpheus/smtc-linux-loong64-gnu/package.json').version
+          const binding = require('@open-orpheus/system-win32-linux-loong64-gnu')
+          const bindingPackageVersion = require('@open-orpheus/system-win32-linux-loong64-gnu/package.json').version
           if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -400,13 +400,13 @@ function requireNative() {
     } else if (process.arch === 'riscv64') {
       if (isMusl()) {
         try {
-          return require('./smtc.linux-riscv64-musl.node')
+          return require('./sys.linux-riscv64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@open-orpheus/smtc-linux-riscv64-musl')
-          const bindingPackageVersion = require('@open-orpheus/smtc-linux-riscv64-musl/package.json').version
+          const binding = require('@open-orpheus/system-win32-linux-riscv64-musl')
+          const bindingPackageVersion = require('@open-orpheus/system-win32-linux-riscv64-musl/package.json').version
           if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -416,13 +416,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./smtc.linux-riscv64-gnu.node')
+          return require('./sys.linux-riscv64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@open-orpheus/smtc-linux-riscv64-gnu')
-          const bindingPackageVersion = require('@open-orpheus/smtc-linux-riscv64-gnu/package.json').version
+          const binding = require('@open-orpheus/system-win32-linux-riscv64-gnu')
+          const bindingPackageVersion = require('@open-orpheus/system-win32-linux-riscv64-gnu/package.json').version
           if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -433,13 +433,13 @@ function requireNative() {
       }
     } else if (process.arch === 'ppc64') {
       try {
-        return require('./smtc.linux-ppc64-gnu.node')
+        return require('./sys.linux-ppc64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-linux-ppc64-gnu')
-        const bindingPackageVersion = require('@open-orpheus/smtc-linux-ppc64-gnu/package.json').version
+        const binding = require('@open-orpheus/system-win32-linux-ppc64-gnu')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-linux-ppc64-gnu/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -449,13 +449,13 @@ function requireNative() {
       }
     } else if (process.arch === 's390x') {
       try {
-        return require('./smtc.linux-s390x-gnu.node')
+        return require('./sys.linux-s390x-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-linux-s390x-gnu')
-        const bindingPackageVersion = require('@open-orpheus/smtc-linux-s390x-gnu/package.json').version
+        const binding = require('@open-orpheus/system-win32-linux-s390x-gnu')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-linux-s390x-gnu/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -469,13 +469,13 @@ function requireNative() {
   } else if (process.platform === 'openharmony') {
     if (process.arch === 'arm64') {
       try {
-        return require('./smtc.openharmony-arm64.node')
+        return require('./sys.openharmony-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-openharmony-arm64')
-        const bindingPackageVersion = require('@open-orpheus/smtc-openharmony-arm64/package.json').version
+        const binding = require('@open-orpheus/system-win32-openharmony-arm64')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-openharmony-arm64/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -485,13 +485,13 @@ function requireNative() {
       }
     } else if (process.arch === 'x64') {
       try {
-        return require('./smtc.openharmony-x64.node')
+        return require('./sys.openharmony-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-openharmony-x64')
-        const bindingPackageVersion = require('@open-orpheus/smtc-openharmony-x64/package.json').version
+        const binding = require('@open-orpheus/system-win32-openharmony-x64')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-openharmony-x64/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -501,13 +501,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm') {
       try {
-        return require('./smtc.openharmony-arm.node')
+        return require('./sys.openharmony-arm.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@open-orpheus/smtc-openharmony-arm')
-        const bindingPackageVersion = require('@open-orpheus/smtc-openharmony-arm/package.json').version
+        const binding = require('@open-orpheus/system-win32-openharmony-arm')
+        const bindingPackageVersion = require('@open-orpheus/system-win32-openharmony-arm/package.json').version
         if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -623,10 +623,10 @@ if (!nativeBinding || forceWasi) {
     let candidateError = null
     let candidateFailed = false
     try {
-      candidateError = __napiWasiResolveCandidate('./smtc.wasi.cjs', false, ["./smtc.wasm32-wasi.debug.wasm","./smtc.wasm32-wasi.wasm"])
+      candidateError = __napiWasiResolveCandidate('./sys.wasi.cjs', false, ["./sys.wasm32-wasi.debug.wasm","./sys.wasm32-wasi.wasm"])
       candidateFailed = candidateError !== null
       if (!candidateFailed) {
-        wasiBinding = require('./smtc.wasi.cjs')
+        wasiBinding = require('./sys.wasi.cjs')
         nativeBinding = wasiBinding
         wasiBindingLoaded = true
       }
@@ -643,16 +643,16 @@ if (!nativeBinding || forceWasi) {
     let candidateError = null
     let candidateFailed = false
     try {
-      candidateError = __napiWasiResolveCandidate('@open-orpheus/smtc-wasm32-wasi', true, undefined)
+      candidateError = __napiWasiResolveCandidate('@open-orpheus/system-win32-wasm32-wasi', true, undefined)
       candidateFailed = candidateError !== null
       if (!candidateFailed) {
         if (process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          const bindingPackageVersion = require('@open-orpheus/smtc-wasm32-wasi/package.json').version
+          const bindingPackageVersion = require('@open-orpheus/system-win32-wasm32-wasi/package.json').version
           if (bindingPackageVersion !== '0.1.0') {
             throw new Error(`WASI binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
         }
-        wasiBinding = require('@open-orpheus/smtc-wasm32-wasi')
+        wasiBinding = require('@open-orpheus/system-win32-wasm32-wasi')
         nativeBinding = wasiBinding
         wasiBindingLoaded = true
       }
@@ -701,3 +701,5 @@ if (!nativeBinding) {
 
 module.exports = nativeBinding
 module.exports.MediaSession = nativeBinding.MediaSession
+module.exports.canShutdown = nativeBinding.canShutdown
+module.exports.shutdownNow = nativeBinding.shutdownNow

@@ -1,7 +1,7 @@
 {
-  "name": "@open-orpheus/smtc",
+  "name": "@open-orpheus/system-win32",
   "version": "0.1.0",
-  "description": "Windows SMTC module for Open Orpheus",
+  "description": "Windows system module for Open Orpheus (media session + power-off)",
   "main": "index.js",
   "license": "MIT",
   "keywords": [
@@ -17,7 +17,7 @@
     "index.js"
   ],
   "napi": {
-    "binaryName": "smtc",
+    "binaryName": "sys",
     "targets": [
       "x86_64-pc-windows-msvc",
       "aarch64-pc-windows-msvc"

@@ -1,5 +1,7 @@
-#![cfg(windows)] // Windows-only module (System Media Transport Controls); see package.json "os".
+#![cfg(windows)] // Windows-only module (SMTC media session + power-off); see package.json "os".
 #![deny(clippy::all)]
+
+pub mod shutdown;
 
 use std::sync::{Arc, Mutex};
 
@@ -234,6 +236,6 @@ fn fire_event(
     }
 }
 
-fn napi_err(error: windows::core::Error) -> Error {
+pub(crate) fn napi_err(error: windows::core::Error) -> Error {
     Error::from_reason(error.to_string())
 }

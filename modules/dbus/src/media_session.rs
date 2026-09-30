@@ -9,6 +9,7 @@ use zbus::Connection;
 use crate::media_session::mpris::{
     Interface, MprisMetadata, PlaybackState, PlayerInterface, PlayerState,
 };
+use crate::EventReturn;
 
 mod mpris;
 
@@ -37,13 +38,6 @@ pub enum MediaSessionEvents {
     SetPosition { position: i64 },
     SetVolume { volume: f64 },
 }
-
-/// What a JS event handler may return.
-///
-/// A handler may be synchronous (it returns nothing) or asynchronous (it
-/// returns a promise). The promise arm must come *first*: `Either` picks the
-/// first arm whose value validates, and the `Undefined` arm accepts anything.
-type EventReturn = Either<Promise<()>, Undefined>;
 
 type EventHandler = Arc<ThreadsafeFunction<MediaSessionEvents, EventReturn>>;
 
@@ -100,20 +94,6 @@ pub struct MediaSession {
     conn: Connection,
     state: Arc<StdMutex<PlayerState>>,
     dispatcher: EventDispatcher,
-}
-
-macro_rules! napi_deferred_task {
-    ($env:ident, $body:expr) => {{
-        let (deferred, object) = $env.create_deferred()?;
-        smol::spawn(async move {
-            match $body.await {
-                Ok(val) => deferred.resolve(move |_env| Ok(val)),
-                Err(err) => deferred.reject(Error::from_reason(err.to_string())),
-            }
-        })
-        .detach();
-        Ok(object)
-    }};
 }
 
 #[napi]

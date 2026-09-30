@@ -13,8 +13,6 @@ import logger from "./main/logger";
 // We want to hook Wayland connections as early as possible.
 import "@open-orpheus/window";
 
-import { onExit } from "@open-orpheus/lifecycle";
-
 // Handle errors as early as possible
 import "./main/error";
 
@@ -39,12 +37,7 @@ import {
   raceArgument,
 } from "./main/arguments";
 import { toError } from "./util";
-import {
-  LifecycleState,
-  setLifecycleState,
-  state as lifecycleState,
-  setStartupTask,
-} from "./main/lifecycle";
+import { installLifecycle, setStartupTask } from "./main/lifecycle";
 import { checkEnvFlagPresent, isFileNotFound } from "./main/util";
 import { PackageDownloadReason } from "$sharedTypes/package-download";
 
@@ -60,6 +53,8 @@ if (started) {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 }
+
+installLifecycle();
 
 // Register privileged schemes
 protocol.registerSchemesAsPrivileged([
@@ -432,10 +427,6 @@ app.on("ready", async () => {
       }),
     ]);
 
-    onExit(() => {
-      app.quit(); // Graceful exit
-    });
-
     // Create main window
     await (await import("./main/windows/main")).default();
 
@@ -455,21 +446,6 @@ app.on("ready", async () => {
     }
     app.exit(1);
   }
-});
-
-app.on("window-all-closed", () => {
-  // Make sure we don't quit because of package download window being closed before main window has started
-  if (lifecycleState !== LifecycleState.Starting) {
-    app.quit();
-  }
-});
-
-app.on("before-quit", () => {
-  // Allow some windows to be closed.
-  setLifecycleState(LifecycleState.Quitting);
-  // On macOS, music desktop window isn't being closed by Electron for some reason,
-  // we are destroying it here manually.
-  import("./main/calls/desktop").then((m) => m.musicDesktopWindow?.destroy());
 });
 
 app.on("open-file", (e, path) => {

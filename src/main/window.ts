@@ -18,7 +18,11 @@ import type { LayerShellOptions } from "@open-orpheus/window";
 export type { LayerShellOptions };
 
 import type AppMenu from "./menu";
-import { LifecycleState, state as lifecycleState } from "./lifecycle";
+import {
+  events as lifecycleEvents,
+  LifecycleState,
+  state as lifecycleState,
+} from "./lifecycle";
 
 const browserManagedWindowMap = new WeakMap<BrowserWindow, ManagedWindow>();
 const managedBrowserWindows = new Set<BrowserWindow>();
@@ -46,6 +50,22 @@ const finalizationRegistry = new FinalizationRegistry<WeakRef<ManagedWindow>>(
 const REAPPLY_DELAYS_MS = [0, 50, 100, 200, 400] as const;
 
 export let mainWindow: BrowserWindow | null = null;
+
+/**
+ * Take every window off screen as soon as the app starts shutting down, so the
+ * app looks closed while the shutdown tasks run.
+ *
+ * The raw `BrowserWindow` is hidden rather than the wrapper, because
+ * `OnDemandWindow.hide()` is the explicit dismiss and closes the window
+ * outright. Hiding still reaches the wrapper through Electron's `hide` event,
+ * which is why `OnDemandWindow.onWindowHidden` declines to destroy while the
+ * app is quitting. The final `app.quit()` does the real teardown.
+ */
+lifecycleEvents.on("quitting", () => {
+  for (const ref of managedWindows) {
+    ref.deref()?.window?.hide();
+  }
+});
 
 export function setMainWindow(wnd: BrowserWindow) {
   mainWindow = wnd;
@@ -838,6 +858,11 @@ export abstract class OnDemandWindow<
 
   // A window that hides itself is dismissed; `show()` recreates it.
   protected onWindowHidden(): void {
+    // Except while the app is shutting down, where windows are taken off
+    // screen only so the app looks closed. Destroying one here would leave a
+    // shutdown task unable to reach its renderer, so the window stays bound
+    // until the `app.quit()` that ends the sequence closes it for real.
+    if (lifecycleState === LifecycleState.Quitting) return;
     this.hide();
   }
 
