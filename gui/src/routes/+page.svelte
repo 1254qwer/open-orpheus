@@ -152,6 +152,15 @@
                     ><RefreshCw /></Button
                   >
                 </p>
+                {#await updateInfoPromise then v}
+                  {#if v}
+                    <p class="text-xs text-orange-600">
+                      <UpdateIcon
+                        class="inline size-4 align-bottom"
+                      />&nbsp;可更新至&nbsp;{v.version}
+                    </p>
+                  {/if}
+                {/await}
               </div>
               <div class="flex justify-center">
                 {#each socials as social (social.name)}
