@@ -3,11 +3,7 @@ import { join } from "node:path";
 import { BrowserWindow, screen } from "electron";
 import type { BrowserWindowConstructorOptions } from "electron";
 import photon from "@silvia-odwyer/photon-node";
-import {
-  DesktopEnvironment,
-  dragWindow,
-  getDesktopEnvironment,
-} from "@open-orpheus/window";
+import { DesktopEnvironment, dragWindow, getDesktopEnvironment } from "@open-orpheus/window";
 
 import {
   DesktopLyricsPlayInfo,
@@ -17,13 +13,7 @@ import {
   TextAlignType,
 } from "$sharedTypes/desktop-lyrics";
 
-import {
-  guiUrl,
-  mainWindow,
-  ManagedWindow,
-  OnDemandWindow,
-  switchWindowPolicy,
-} from "../window";
+import { guiUrl, mainWindow, ManagedWindow, OnDemandWindow, switchWindowPolicy } from "../window";
 import { registerIpcHandlers } from "../../bridge/register";
 import type {
   DesktopLyricsContract,
@@ -84,11 +74,7 @@ export function updateLyricsPlayInfo(info: DesktopLyricsPlayInfo | null) {
 
 function performAction(action: string) {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(
-      "channel.call",
-      "player.ondesktoplyricaction",
-      action
-    );
+    mainWindow.webContents.send("channel.call", "player.ondesktoplyricaction", action);
   }
 }
 
@@ -104,7 +90,7 @@ const desktopLyricsWindowOptions = {
   title: "Open Orpheus Lyrics",
   webPreferences: {
     partition: "open-orpheus",
-    preload: join(import.meta.dirname, "desktop-lyrics.js"),
+    preload: join(import.meta.dirname, "desktop-lyrics.cjs"),
   },
 } satisfies BrowserWindowConstructorOptions;
 
@@ -130,13 +116,7 @@ function setupDesktopLyricsWindow(wnd: BrowserWindow): BrowserWindow {
     performAction: async (_event, action: string) => {
       performAction(action);
     },
-    onMouseWheel: async (
-      _event,
-      pageX: number,
-      pageY: number,
-      delta: number,
-      modifier = 0
-    ) => {
+    onMouseWheel: async (_event, pageX: number, pageY: number, delta: number, modifier = 0) => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
       let x = pageX;
       let y = pageY;
@@ -181,9 +161,7 @@ class DesktopLyricsWindow extends ManagedWindow {
     super();
     this.setData("name", "desktop_lyrics");
     this.requestCloseApproval(notifyDesktopLyricsClose);
-    setupDesktopLyricsWindow(
-      this.createBrowserWindow(desktopLyricsWindowOptions)
-    );
+    setupDesktopLyricsWindow(this.createBrowserWindow(desktopLyricsWindowOptions));
   }
 }
 
@@ -195,17 +173,13 @@ class DesktopLyricsOnDemandWindow extends OnDemandWindow {
   }
 
   createWindow(): BrowserWindow {
-    return setupDesktopLyricsWindow(
-      this.createBrowserWindow(desktopLyricsWindowOptions)
-    );
+    return setupDesktopLyricsWindow(this.createBrowserWindow(desktopLyricsWindowOptions));
   }
 }
 
 /** `"on-demand"` destroys the window when hidden; anything else keeps it. */
 function createWindowForLifecycle(value: unknown): ManagedWindow {
-  return value === "on-demand"
-    ? new DesktopLyricsOnDemandWindow()
-    : new DesktopLyricsWindow();
+  return value === "on-demand" ? new DesktopLyricsOnDemandWindow() : new DesktopLyricsWindow();
 }
 
 let lifecycleSwitchRegistered = false;
@@ -222,9 +196,7 @@ function registerLifecycleSwitch() {
 
   settingsEvents.on("change", (e) => {
     if (e.data.key !== "window.lifecycle" || !window) return;
-    window = switchWindowPolicy(window, () =>
-      createWindowForLifecycle(e.data.value)
-    );
+    window = switchWindowPolicy(window, () => createWindowForLifecycle(e.data.value));
   });
 }
 
@@ -262,7 +234,7 @@ export async function createDesktopLyricsPreview(
     webPreferences: {
       offscreen: true,
       partition: "open-orpheus",
-      preload: join(import.meta.dirname, "desktop-lyrics-preview.js"),
+      preload: join(import.meta.dirname, "desktop-lyrics-preview.cjs"),
     },
   }).window;
   if (!previewWindow) {
@@ -284,16 +256,9 @@ export async function createDesktopLyricsPreview(
           clearTimeout(timeout);
           try {
             const image = await previewWindow.webContents.capturePage();
-            const photonImage = photon.PhotonImage.new_from_byteslice(
-              image.toPNG()
-            );
+            const photonImage = photon.PhotonImage.new_from_byteslice(image.toPNG());
             const pngBuf = photon
-              .resize(
-                photonImage,
-                width,
-                height,
-                photon.SamplingFilter.Lanczos3
-              )
+              .resize(photonImage, width, height, photon.SamplingFilter.Lanczos3)
               .get_bytes();
             resolve([Buffer.from(pngBuf), [width, height]]);
           } catch (err) {

@@ -39,10 +39,7 @@ import {
   type PlayCacheConfig,
   type PlayCacheInfo,
 } from "../cache/PlayCacheManager";
-import createCacheManager, {
-  lyricCacheManager,
-  playCacheManager,
-} from "../cache";
+import createCacheManager, { lyricCacheManager, playCacheManager } from "../cache";
 import { toError } from "../../util";
 import { commentToID3Json, ID3JsonToComment } from "../id3";
 import globalLogger from "../logger";
@@ -58,7 +55,7 @@ type DownloadScannerItem = {
 
 async function readDownloadedMusicInfo(
   file: string,
-  base: string | undefined = undefined
+  base?: string
 ): Promise<DownloadScannerItem | undefined> {
   const filePath = normalizePath(base ?? "", file);
   let comment;
@@ -133,11 +130,7 @@ registerCallHandler<[string, string, string], [string, string]>(
             !(await fileExists(join(downloadDir, filename))) &&
             !event.sender.isDestroyed()
           ) {
-            event.sender.send(
-              "channel.call",
-              "storage.onfiledeleted",
-              filename
-            );
+            event.sender.send("channel.call", "storage.onfiledeleted", filename);
           }
         }
       );
@@ -171,70 +164,35 @@ registerCallHandler<[string, string, boolean, string], void>(
       );
     } catch {
       // -2: Not Found
-      event.sender.send(
-        "channel.call",
-        "storage.onreadfromfiledone",
-        taskId,
-        -2
-      );
+      event.sender.send("channel.call", "storage.onreadfromfiledone", taskId, -2);
     }
   }
 );
 
-registerCallHandler<[string, string], void>(
-  "storage.execsql",
-  async (event, taskId, sql) => {
-    try {
-      const execResult = await webDb.executeSql(sql);
-      event.sender.send(
-        "channel.call",
-        "storage.onexecsqldone",
-        taskId,
-        ...execResult
-      );
-    } catch (error) {
-      LOGGER.error({ sql, err: error }, "Error executing SQL");
-      event.sender.send(
-        "channel.call",
-        "storage.onexecsqldone",
-        taskId,
-        1,
-        undefined,
-        [0, 0, 0]
-      );
-    }
+registerCallHandler<[string, string], void>("storage.execsql", async (event, taskId, sql) => {
+  try {
+    const execResult = await webDb.executeSql(sql);
+    event.sender.send("channel.call", "storage.onexecsqldone", taskId, ...execResult);
+  } catch (error) {
+    LOGGER.error({ sql, err: error }, "Error executing SQL");
+    event.sender.send("channel.call", "storage.onexecsqldone", taskId, 1, undefined, [0, 0, 0]);
   }
-);
+});
 
 registerCallHandler<[string, string], void>(
   "storage.exectransaction",
   async (event, taskId, sql) => {
     try {
       const execResult = await webDb.executeTransaction(sql);
-      event.sender.send(
-        "channel.call",
-        "storage.onexecsqldone",
-        taskId,
-        ...execResult
-      );
+      event.sender.send("channel.call", "storage.onexecsqldone", taskId, ...execResult);
     } catch (error) {
       LOGGER.error({ sql, err: error }, "Error executing SQL transaction");
-      event.sender.send(
-        "channel.call",
-        "storage.onexecsqldone",
-        taskId,
-        1,
-        undefined,
-        [0, 0, 0]
-      );
+      event.sender.send("channel.call", "storage.onexecsqldone", taskId, 1, undefined, [0, 0, 0]);
     }
   }
 );
 
-registerCallHandler<
-  [string, string, string, string, boolean, "abs" | "rel"],
-  void
->(
+registerCallHandler<[string, string, string, string, boolean, "abs" | "rel"], void>(
   "storage.savetofile",
   async (event, taskId, content, mode, path, alone, type) => {
     let filePath: string;
@@ -281,32 +239,14 @@ registerCallHandler<[string, "abs" | "rel", "", string, boolean], void>(
 
     try {
       await rm(filePath);
-      event.sender.send(
-        "channel.call",
-        "storage.ondeletefilesdone",
-        taskId,
-        0,
-        [filePath]
-      );
+      event.sender.send("channel.call", "storage.ondeletefilesdone", taskId, 0, [filePath]);
     } catch (err) {
       if (isFileNotFound(err)) {
-        event.sender.send(
-          "channel.call",
-          "storage.ondeletefilesdone",
-          taskId,
-          1,
-          undefined
-        );
+        event.sender.send("channel.call", "storage.ondeletefilesdone", taskId, 1, undefined);
         return;
       }
       LOGGER.error({ file: filePath, err }, "Failed to delete file");
-      event.sender.send(
-        "channel.call",
-        "storage.ondeletefilesdone",
-        taskId,
-        2,
-        undefined
-      );
+      event.sender.send("channel.call", "storage.ondeletefilesdone", taskId, 2, undefined);
     }
   }
 );
@@ -323,13 +263,7 @@ registerCallHandler<[string, { id: string; path: string }[], string], void>(
         };
       })
     );
-    event.sender.send(
-      "channel.call",
-      "storage.oncheckfilesexist",
-      taskId,
-      true,
-      results
-    );
+    event.sender.send("channel.call", "storage.oncheckfilesexist", taskId, true, results);
   }
 );
 
@@ -338,7 +272,7 @@ registerCallHandler<[string, { id: string; path: string }[], string], void>(
 registerCallHandler<[string, boolean, string, number, string[]], void>(
   "storage.downloadscanner",
   (event, path, recursive, emptyStr, limit, excludes) => {
-    (async () => {
+    void (async () => {
       path = normalizePath(path);
       const excludeSet = new Set(excludes.map((p) => normalizePath(path, p)));
       const batch: DownloadScannerItem[] = [];
@@ -350,11 +284,7 @@ registerCallHandler<[string, boolean, string, number, string[]], void>(
 
       const flush = () => {
         if (batch.length > 0) {
-          event.sender.send(
-            "channel.call",
-            "storage.ondownloadscanner",
-            batch.splice(0)
-          );
+          event.sender.send("channel.call", "storage.ondownloadscanner", batch.splice(0));
         }
       };
 
@@ -417,20 +347,14 @@ registerCallHandler<
   return [cachedTrack.meta];
 });
 
-registerCallHandler<[PlayCacheConfig], void>(
-  "storage.setPlayCacheConfig",
-  (event, config) => {
-    playCacheManager?.setConfig(config);
-  }
-);
+registerCallHandler<[PlayCacheConfig], void>("storage.setPlayCacheConfig", (event, config) => {
+  playCacheManager?.setConfig(config);
+});
 
-registerCallHandler<[], [PlayCacheInfo | undefined]>(
-  "storage.playCacheInfo",
-  async () => {
-    const info = await playCacheManager?.getInfo();
-    return [info];
-  }
-);
+registerCallHandler<[], [PlayCacheInfo | undefined]>("storage.playCacheInfo", async () => {
+  const info = await playCacheManager?.getInfo();
+  return [info];
+});
 
 registerCallHandler<[""], [boolean]>("storage.clearCache", async () => {
   if (!playCacheManager) return [false];
@@ -442,24 +366,15 @@ registerCallHandler<[""], [boolean]>("storage.clearCache", async () => {
   }
 });
 
-registerCallHandler<[string], void>(
-  "storage.getTempFile",
-  async (event, songId) => {
-    let content = "";
-    try {
-      content = (await lyricCacheManager?.get(songId)) ?? "";
-    } catch (error) {
-      LOGGER.error({ songId, err: error }, "Error reading temp file");
-    }
-    event.sender.send(
-      "channel.call",
-      "storage.ongettempfile",
-      songId,
-      content ? 0 : 404,
-      content
-    );
+registerCallHandler<[string], void>("storage.getTempFile", async (event, songId) => {
+  let content = "";
+  try {
+    content = (await lyricCacheManager?.get(songId)) ?? "";
+  } catch (error) {
+    LOGGER.error({ songId, err: error }, "Error reading temp file");
   }
-);
+  event.sender.send("channel.call", "storage.ongettempfile", songId, content ? 0 : 404, content);
+});
 
 registerCallHandler<[string, string, string], void>(
   "storage.updatetemp",
@@ -479,19 +394,16 @@ registerCallHandler<[string, string, string], void>(
   }
 );
 
-registerCallHandler<[string], [boolean]>(
-  "storage.testwriteable",
-  async (event, path) => {
-    const testFilePath = join(path, "open_orpheus_test_writable.tmp");
-    try {
-      await writeFile(testFilePath, "test", { flag: "w" });
-      await unlink(testFilePath);
-      return [true];
-    } catch {
-      return [false];
-    }
+registerCallHandler<[string], [boolean]>("storage.testwriteable", async (event, path) => {
+  const testFilePath = join(path, "open_orpheus_test_writable.tmp");
+  try {
+    await writeFile(testFilePath, "test", { flag: "w" });
+    await unlink(testFilePath);
+    return [true];
+  } catch {
+    return [false];
   }
-);
+});
 
 registerCallHandler<[string, "abs" | "rel", "", string], void>(
   "storage.listFile",
@@ -513,13 +425,7 @@ registerCallHandler<[string, "abs" | "rel", "", string], void>(
           path: join(filePath, dirent.name),
           type: dirent.isDirectory() ? "directory" : "file",
         }));
-        event.sender.send(
-          "channel.call",
-          "storage.onlistfile",
-          taskId,
-          0,
-          files
-        );
+        event.sender.send("channel.call", "storage.onlistfile", taskId, 0, files);
       })
       .catch((error) => {
         LOGGER.error({ path: filePath }, "Error listing files: %s", error);
@@ -545,10 +451,7 @@ type AddId3Request = {
 // - taskId
 // - code? 1
 // - final media path relative to download path
-registerCallHandler<
-  [string, string, string | "", string | "", AddId3Request],
-  void
->(
+registerCallHandler<[string, string, string | "", string | "", AddId3Request], void>(
   "storage.addid3",
   (event, taskId, mediaPath, imagePath, mediaInfo, id3Info) => {
     // Don't block the call.
@@ -610,13 +513,7 @@ registerCallHandler<
       if (imageFullPath) await rm(imageFullPath, { force: true });
       await rm(mediaPath, { force: true });
 
-      event.sender.send(
-        "channel.call",
-        "storage.onaddid3done",
-        taskId,
-        1,
-        relPath
-      );
+      event.sender.send("channel.call", "storage.onaddid3done", taskId, 1, relPath);
     })().catch((err) => {
       LOGGER.error({ err: toError(err) }, "Failed to write ID3 tag");
       event.sender.send("channel.call", "storage.onaddid3done", taskId, 0);
@@ -631,10 +528,7 @@ async function handleFileBatch(
   destPaths: string[]
 ) {
   if (srcPaths.length !== destPaths.length) {
-    LOGGER.error(
-      { type, srcPaths, destPaths },
-      "Mismatch srcPaths and destPaths"
-    );
+    LOGGER.error({ type, srcPaths, destPaths }, "Mismatch srcPaths and destPaths");
     return;
   }
 
@@ -688,48 +582,24 @@ async function handleFileBatch(
 
 registerCallHandler<["copy", "abs", "", string[], "abs", "", string[]], void>(
   "storage.copyfiles",
-  async (
-    event,
-    type,
-    srcType,
-    emptyStr1,
-    srcPaths,
-    destType,
-    emptyStr2,
-    destPaths
-  ) => {
+  async (event, type, srcType, emptyStr1, srcPaths, destType, emptyStr2, destPaths) => {
     if (type !== "copy" || srcType !== "abs" || destType !== "abs") {
-      LOGGER.error(
-        { type, srcType, destType },
-        "Unsupported file operation type"
-      );
+      LOGGER.error({ type, srcType, destType }, "Unsupported file operation type");
       return;
     }
 
-    handleFileBatch("copy", event, srcPaths, destPaths);
+    void handleFileBatch("copy", event, srcPaths, destPaths);
   }
 );
 
 registerCallHandler<["move", "abs", "", string[], "abs", "", string[]], void>(
   "storage.movefiles",
-  async (
-    event,
-    type,
-    srcType,
-    emptyStr1,
-    srcPaths,
-    destType,
-    emptyStr2,
-    destPaths
-  ) => {
+  async (event, type, srcType, emptyStr1, srcPaths, destType, emptyStr2, destPaths) => {
     if (type !== "move" || srcType !== "abs" || destType !== "abs") {
-      LOGGER.error(
-        { type, srcType, destType },
-        "Unsupported file operation type"
-      );
+      LOGGER.error({ type, srcType, destType }, "Unsupported file operation type");
       return;
     }
 
-    handleFileBatch("move", event, srcPaths, destPaths);
+    void handleFileBatch("move", event, srcPaths, destPaths);
   }
 );

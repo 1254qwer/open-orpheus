@@ -10,9 +10,7 @@
   };
 
   declare const downloadReason: PackageDownloadReason;
-  declare const downloadPackage: (
-    callback: (progress: DownloadPackageProgress) => void
-  ) => void;
+  declare const downloadPackage: (callback: (progress: DownloadPackageProgress) => void) => void;
 </script>
 
 <script lang="ts">
@@ -87,16 +85,12 @@
       <p class="text-gray-600">{description}</p>
     </div>
     <div class="text-center">
-      <Button onclick={startDownload} size="lg" class="cursor-pointer px-8"
-        >下载</Button
-      >
+      <Button onclick={startDownload} size="lg" class="cursor-pointer px-8">下载</Button>
       <p class="mt-2 w-64 text-sm opacity-75">
         将会自动下载网易云音乐 {versions.version} ({versions.build}) 的资源包（{versions.commit}）
       </p>
       <p class="my-4">或者</p>
-      <Button variant="link" href={versions.downloadUrl} target="_blank"
-        >手动下载安装包</Button
-      >
+      <Button variant="link" href={versions.downloadUrl} target="_blank">手动下载安装包</Button>
     </div>
   {:else}
     <div class="flex w-full max-w-sm flex-col gap-4">
@@ -114,10 +108,7 @@
       </div>
 
       {#if phase === "downloading" && downloadProgress}
-        {@const pct =
-          downloadProgress.progress != null
-            ? downloadProgress.progress * 100
-            : null}
+        {@const pct = downloadProgress.progress != null ? downloadProgress.progress * 100 : null}
         <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200">
           <div
             class="h-2 rounded-full bg-blue-500"

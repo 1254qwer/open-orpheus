@@ -18,11 +18,7 @@ import type { LayerShellOptions } from "@open-orpheus/window";
 export type { LayerShellOptions };
 
 import type AppMenu from "./menu";
-import {
-  events as lifecycleEvents,
-  LifecycleState,
-  state as lifecycleState,
-} from "./lifecycle";
+import { events as lifecycleEvents, LifecycleState, state as lifecycleState } from "./lifecycle";
 
 const browserManagedWindowMap = new WeakMap<BrowserWindow, ManagedWindow>();
 const managedBrowserWindows = new Set<BrowserWindow>();
@@ -34,11 +30,9 @@ const managedWindows = new Set<WeakRef<ManagedWindow>>();
  * before the window — and therefore before its surface — exists.
  */
 let nextManagedWindowId = 1;
-const finalizationRegistry = new FinalizationRegistry<WeakRef<ManagedWindow>>(
-  (held) => {
-    managedWindows.delete(held);
-  }
-);
+const finalizationRegistry = new FinalizationRegistry<WeakRef<ManagedWindow>>((held) => {
+  managedWindows.delete(held);
+});
 
 /**
  * Backoff used while probing for a usable platform surface after a show.
@@ -110,9 +104,7 @@ function shouldRespectSizeConstraints(wnd: BrowserWindow) {
 
 /** The x/y/w/h shape the native input-region API expects. */
 function toNativeRegions(regions: InputRegion[]) {
-  return regions.length
-    ? regions.map((v) => ({ x: v.x, y: v.y, w: v.width, h: v.height }))
-    : null;
+  return regions.length ? regions.map((v) => ({ x: v.x, y: v.y, w: v.width, h: v.height })) : null;
 }
 
 /**
@@ -122,9 +114,7 @@ function toNativeRegions(regions: InputRegion[]) {
  */
 export function guiUrl(route = "/"): string {
   const path = route.startsWith("/") ? route : `/${route}`;
-  return GUI_VITE_DEV_SERVER_URL
-    ? `${GUI_VITE_DEV_SERVER_URL}${path}`
-    : `gui://frontend${path}`;
+  return GUI_VITE_DEV_SERVER_URL ? `${GUI_VITE_DEV_SERVER_URL}${path}` : `gui://frontend${path}`;
 }
 
 app.on("browser-window-created", (event, wnd) => {
@@ -139,12 +129,12 @@ app.on("browser-window-created", (event, wnd) => {
 // A window whose layer-shell role was refused can only be fixed by re-creating
 // it, so the native layer's report has to reach the application. Registered
 // once, when the session is known.
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
   if (getDesktopEnvironment() !== DesktopEnvironment.Wayland) return;
   onLayerShellRoleRefused((windowId: string) => {
     const managed = ManagedWindow.fromId(windowId);
     const wnd = managed?.window;
-    if (managed && wnd) managed.emit("layerShellRefused", wnd);
+    if (managed && wnd) void managed.emit("layerShellRefused", wnd);
   });
 });
 
@@ -217,9 +207,8 @@ export abstract class ManagedWindow<
       managedBrowserWindows.delete(previous);
       browserManagedWindowMap.delete(previous);
       this.detachWindowListeners(previous);
-      if (this._lastOnClosedListener)
-        previous.off("closed", this._lastOnClosedListener);
-      this.emit("unbind", previous);
+      if (this._lastOnClosedListener) previous.off("closed", this._lastOnClosedListener);
+      void this.emit("unbind", previous);
     }
     this._window = value;
     if (value) {
@@ -228,7 +217,7 @@ export abstract class ManagedWindow<
       this._lastOnClosedListener = () => this.releaseWindow(value);
       value.on("closed", this._lastOnClosedListener);
       this.attachWindowListeners(value);
-      this.emit("bind", value);
+      void this.emit("bind", value);
     }
   }
 
@@ -257,9 +246,7 @@ export abstract class ManagedWindow<
   private decoratedTitle(): string {
     // Only Wayland strips the id out again; elsewhere the decoration would show
     // up in the window title (invisible characters plus a visible number).
-    return this.isWayland()
-      ? decorateWindowTitle(this.id, this._title)
-      : this._title;
+    return this.isWayland() ? decorateWindowTitle(this.id, this._title) : this._title;
   }
 
   private applyTitle(): void {
@@ -273,10 +260,7 @@ export abstract class ManagedWindow<
    * or carry someone else's; it is taken, prevented, and written back by this
    * module instead. Attached only where the title is decorated.
    */
-  private readonly _pageTitleListener = (
-    event: { preventDefault(): void },
-    title: string
-  ) => {
+  private readonly _pageTitleListener = (event: { preventDefault(): void }, title: string) => {
     event.preventDefault();
     if (title === this.decoratedTitle()) return;
     this.setTitle(title);
@@ -302,7 +286,7 @@ export abstract class ManagedWindow<
     // Whatever was declared for this surface has been claimed by now.
     this._layerShellDeclared = false;
     this.reapplyNativeState();
-    this.emit("show", wnd);
+    void this.emit("show", wnd);
   };
   private readonly _hideListener = () => {
     const wnd = this._window;
@@ -312,7 +296,7 @@ export abstract class ManagedWindow<
     this._layerShellDeclared = false;
     this.cancelReapply();
     this.onWindowHidden();
-    this.emit("hide", wnd);
+    void this.emit("hide", wnd);
   };
   private readonly _closeListener = (event: { preventDefault(): void }) => {
     if (
@@ -372,7 +356,7 @@ export abstract class ManagedWindow<
 
     wnd.webContents.setWindowOpenHandler(({ url }) => {
       if (url.startsWith("http://") || url.startsWith("https://")) {
-        shell.openExternal(url);
+        void shell.openExternal(url);
       }
       return { action: "deny" };
     });
@@ -412,8 +396,7 @@ export abstract class ManagedWindow<
     wnd.off("page-title-updated", this._pageTitleListener);
 
     if (this._originalShow) wnd.show = this._originalShow;
-    if (this._originalShowInactive)
-      wnd.showInactive = this._originalShowInactive;
+    if (this._originalShowInactive) wnd.showInactive = this._originalShowInactive;
     this._originalShow = null;
     this._originalShowInactive = null;
   }
@@ -426,9 +409,7 @@ export abstract class ManagedWindow<
    * brings its surface with it, so the layer-shell declaration is armed here;
    * one created hidden has no surface until its first show, which arms it.
    */
-  protected createBrowserWindow(
-    options: BrowserWindowConstructorOptions
-  ): BrowserWindow {
+  protected createBrowserWindow(options: BrowserWindowConstructorOptions): BrowserWindow {
     // A new window is a new surface: nothing is in flight for it.
     this._layerShellDeclared = false;
     this.beforeSurfaceCreated();
@@ -445,10 +426,7 @@ export abstract class ManagedWindow<
 
   /** Whether the compositor can take layer surfaces at all. */
   static isLayerShellAvailable(): boolean {
-    return (
-      getDesktopEnvironment() === DesktopEnvironment.Wayland &&
-      isLayerShellAvailable()
-    );
+    return getDesktopEnvironment() === DesktopEnvironment.Wayland && isLayerShellAvailable();
   }
 
   /**
@@ -475,10 +453,7 @@ export abstract class ManagedWindow<
       this._layerShellDeclared = false;
       return true;
     }
-    return (
-      ManagedWindow.isLayerShellAvailable() &&
-      validateLayerShellOptions(options)
-    );
+    return ManagedWindow.isLayerShellAvailable() && validateLayerShellOptions(options);
   }
 
   /** The layer-shell state this window declares, if any. */
@@ -630,9 +605,7 @@ export abstract class ManagedWindow<
       if (!wnd) return;
       if (this.applyPostShowState()) return;
       if (attempt >= REAPPLY_DELAYS_MS.length) {
-        console.warn(
-          `[window] gave up re-applying native state for window ${wnd.id}`
-        );
+        console.warn(`[window] gave up re-applying native state for window ${wnd.id}`);
         return;
       }
       this._reapplyTimer = setTimeout(step, REAPPLY_DELAYS_MS[attempt++]);
@@ -838,9 +811,7 @@ export class BasicManagedWindow extends ManagedWindow {
   }
 }
 
-export abstract class OnDemandWindow<
-  T extends WindowData = WindowData,
-> extends ManagedWindow<T> {
+export abstract class OnDemandWindow<T extends WindowData = WindowData> extends ManagedWindow<T> {
   /** State bound to the single BrowserWindow */
   protected windowState: OnDemandWindowState | null = null;
 

@@ -7,15 +7,9 @@ export function registerLyricsHandlers(wnd: Electron.BrowserWindow) {
     requestFullUpdate: async () => {
       wnd.webContents.send("lyrics.lyricsStoreUpdate", lyricsDispatcher.lyrics);
       wnd.webContents.send("lyrics.sloganUpdate", lyricsDispatcher.slogan);
-      wnd.webContents.send(
-        "lyrics.playStateUpdate",
-        lyricsDispatcher.playState
-      );
+      wnd.webContents.send("lyrics.playStateUpdate", lyricsDispatcher.playState);
       wnd.webContents.send("lyrics.timeUpdate", lyricsDispatcher.time);
-      wnd.webContents.send(
-        "lyrics.playbackRateUpdate",
-        lyricsDispatcher.playbackRate
-      );
+      wnd.webContents.send("lyrics.playbackRateUpdate", lyricsDispatcher.playbackRate);
     },
   });
 
@@ -25,21 +19,15 @@ export function registerLyricsHandlers(wnd: Electron.BrowserWindow) {
   const unlistenSloganUpdate = lyricsDispatcher.on("sloganupdate", (e) => {
     wnd.webContents.send("lyrics.sloganUpdate", e.data);
   });
-  const unlistenPlayStateUpdate = lyricsDispatcher.on(
-    "playstateupdate",
-    (e) => {
-      wnd.webContents.send("lyrics.playStateUpdate", e.data);
-    }
-  );
+  const unlistenPlayStateUpdate = lyricsDispatcher.on("playstateupdate", (e) => {
+    wnd.webContents.send("lyrics.playStateUpdate", e.data);
+  });
   const unlistenTimeUpdate = lyricsDispatcher.on("timeupdate", (e) => {
     wnd.webContents.send("lyrics.timeUpdate", e.data);
   });
-  const unlistenPlaybackRateUpdate = lyricsDispatcher.on(
-    "playbackratechange",
-    (e) => {
-      wnd.webContents.send("lyrics.playbackRateUpdate", e.data);
-    }
-  );
+  const unlistenPlaybackRateUpdate = lyricsDispatcher.on("playbackratechange", (e) => {
+    wnd.webContents.send("lyrics.playbackRateUpdate", e.data);
+  });
 
   wnd.on("closed", () => {
     unlistenLyricsUpdate();

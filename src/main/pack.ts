@@ -57,7 +57,7 @@ export class PackManager extends Emittery<PackManagerEvents> {
     const wp = new WebPack(webPackPath);
     await wp.readPack();
     this.packs.set("web", wp);
-    this.emit("webpackloaded", { name: "web", pack: wp });
+    void this.emit("webpackloaded", { name: "web", pack: wp });
   }
 
   async loadSkinPack(name: string, name2: string) {
@@ -74,7 +74,7 @@ export class PackManager extends Emittery<PackManagerEvents> {
       const skinPack = new SkinPack(skinPackPath);
       await skinPack.readPack();
       this.packs.set(packKey, skinPack);
-      this.emit(`${packKey}packloaded`, {
+      void this.emit(`${packKey}packloaded`, {
         name: packKey,
         pack: skinPack,
         file: `${packName}.skin`,
@@ -101,9 +101,7 @@ export class PackManager extends Emittery<PackManagerEvents> {
     return (await this.once(`${pack}packloaded`)).data.pack as T;
   }
 
-  async downloadPackage(
-    onProgress?: (progress: DownloadPackageProgress) => void
-  ) {
+  async downloadPackage(onProgress?: (progress: DownloadPackageProgress) => void) {
     onProgress?.({
       step: "downloading",
       downloadedBytes: 0,
@@ -118,14 +116,10 @@ export class PackManager extends Emittery<PackManagerEvents> {
 
     response.once("response", (res) => {
       if (res.statusCode < 200 || res.statusCode >= 300) {
-        response.destroy(
-          new Error(`Failed to download web pack: ${res.statusMessage}`)
-        );
+        response.destroy(new Error(`Failed to download web pack: ${res.statusMessage}`));
       }
       const contentLength = res.headers["content-length"];
-      totalBytes = contentLength
-        ? Number.parseInt(contentLength, 10)
-        : undefined;
+      totalBytes = contentLength ? Number.parseInt(contentLength, 10) : undefined;
     });
 
     const chunks: Uint8Array[] = [];

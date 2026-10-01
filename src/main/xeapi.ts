@@ -86,17 +86,14 @@ export class XeapiAegis {
 
   init(config: AegisInitConfig, callbacks: AegisCallbacks) {
     this.callbacks = callbacks;
-    const updateIntervalMinute =
-      config.aegisUpdateIntervalMinute ?? config.updateIntervalMinute;
+    const updateIntervalMinute = config.aegisUpdateIntervalMinute ?? config.updateIntervalMinute;
     if (updateIntervalMinute && updateIntervalMinute > 0) {
       this.dynamicKeyIntervalMinute = updateIntervalMinute;
     }
 
     this.loadCachedPublicKey();
     this.updateState(
-      this.publicKey
-        ? AegisEncryptState.Normal
-        : AegisEncryptState.LocalFallback,
+      this.publicKey ? AegisEncryptState.Normal : AegisEncryptState.LocalFallback,
       this.publicKey ? "cached_public_key" : "missing_public_key"
     );
     this.requestPublicKey("active");
@@ -146,9 +143,7 @@ export class XeapiAegis {
 
     if (response.code !== undefined && response.code !== 200) {
       if (response.code !== 429) {
-        this.recordPublicKeyUpdateFailure(
-          `public_key_response_code_${response.code}`
-        );
+        this.recordPublicKeyUpdateFailure(`public_key_response_code_${response.code}`);
       }
       return false;
     }
@@ -159,24 +154,18 @@ export class XeapiAegis {
       return false;
     }
 
-    const matchedNonce = this.findMatchingPublicKeyNonce(
-      String(timestamp),
-      signature
-    );
+    const matchedNonce = this.findMatchingPublicKeyNonce(String(timestamp), signature);
     if (!matchedNonce) {
-      this.recordPublicKeyUpdateFailure(
-        "invalid_public_key_response_signature"
-      );
+      this.recordPublicKeyUpdateFailure("invalid_public_key_response_signature");
       return false;
     }
 
     let plaintext: string;
     let nextPublicKey: PublicKeyState;
     try {
-      plaintext = aesEcbDecrypt(
-        this.staticKey,
-        Buffer.from(encryptedData, "base64")
-      ).toString("utf8");
+      plaintext = aesEcbDecrypt(this.staticKey, Buffer.from(encryptedData, "base64")).toString(
+        "utf8"
+      );
       nextPublicKey = JSON.parse(plaintext) as PublicKeyState;
     } catch {
       this.recordPublicKeyUpdateFailure("invalid_public_key_encrypted_data");
@@ -229,9 +218,7 @@ export class XeapiAegis {
     if (this.localEncryptFailCount < LOCAL_ENCRYPT_FAILURE_THRESHOLD) return;
 
     this.updateState(
-      this.publicKey
-        ? AegisEncryptState.ClientFallback
-        : AegisEncryptState.LocalFallback,
+      this.publicKey ? AegisEncryptState.ClientFallback : AegisEncryptState.LocalFallback,
       `local_encrypt_failed:${toError(error).message}`
     );
   }
@@ -262,10 +249,7 @@ export class XeapiAegis {
   }
 
   private encryptBusinessData(body: string, businessKey: Buffer) {
-    const staticCiphertext = aesEcbEncrypt(
-      this.staticKey,
-      Buffer.from(body, "utf8")
-    );
+    const staticCiphertext = aesEcbEncrypt(this.staticKey, Buffer.from(body, "utf8"));
     const transformed = transformBusinessData(staticCiphertext);
     return aesEcbEncrypt(businessKey, transformed);
   }
@@ -298,10 +282,7 @@ export class XeapiAegis {
     );
     const iv = randomBytes(12);
     const cipher = createCipheriv("aes-128-gcm", key, iv);
-    const ciphertext = Buffer.concat([
-      cipher.update(plaintext),
-      cipher.final(),
-    ]);
+    const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
     const tag = cipher.getAuthTag();
 
     return Buffer.concat([ephemeralPublicKey, iv, ciphertext, tag]);
@@ -322,10 +303,7 @@ export class XeapiAegis {
 
   private saveCachedPublicKey(plaintext: string) {
     mkdirSync(dirname(this.publicKeyCachePath), { recursive: true });
-    writeFileSync(
-      this.publicKeyCachePath,
-      Buffer.from(plaintext, "utf8").toString("base64")
-    );
+    writeFileSync(this.publicKeyCachePath, Buffer.from(plaintext, "utf8").toString("base64"));
   }
 }
 

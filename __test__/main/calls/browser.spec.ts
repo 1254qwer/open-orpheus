@@ -43,10 +43,9 @@ describe("browser.getFullCookies", () => {
       },
     ]);
 
-    const [cookies] = (await call(
-      "browser.getFullCookies",
-      "https://music.163.com"
-    )) as [Record<string, unknown>[]];
+    const [cookies] = (await call("browser.getFullCookies", "https://music.163.com")) as [
+      Record<string, unknown>[],
+    ];
 
     expect(cookies).toHaveLength(1);
     expect(cookies[0]).toMatchObject({
@@ -89,9 +88,7 @@ describe("browser.getCookies", () => {
   it("returns the plain cookie map", async () => {
     hoisted.getCookies.mockResolvedValue({ MUSIC_U: "token" });
 
-    await expect(call("browser.getCookies", "https://x")).resolves.toEqual([
-      { MUSIC_U: "token" },
-    ]);
+    await expect(call("browser.getCookies", "https://x")).resolves.toEqual([{ MUSIC_U: "token" }]);
   });
 });
 
@@ -159,9 +156,9 @@ describe("browser.setCookie", () => {
   });
 
   it("reports failure for an unparsable url", async () => {
-    await expect(
-      call("browser.setCookie", { ...cookie, Url: "not a url" })
-    ).resolves.toEqual([false]);
+    await expect(call("browser.setCookie", { ...cookie, Url: "not a url" })).resolves.toEqual([
+      false,
+    ]);
     expect(hoisted.setCookie).not.toHaveBeenCalled();
   });
 });
@@ -170,18 +167,14 @@ describe("browser.removeCookie", () => {
   it("removes an existing cookie", async () => {
     hoisted.getCookies.mockResolvedValue({ MUSIC_U: "token" });
 
-    await expect(
-      call("browser.removeCookie", "https://x", "MUSIC_U")
-    ).resolves.toEqual([1]);
+    await expect(call("browser.removeCookie", "https://x", "MUSIC_U")).resolves.toEqual([1]);
     expect(hoisted.removeCookie).toHaveBeenCalledWith("https://x", "MUSIC_U");
   });
 
   it("does nothing for a cookie that is not there", async () => {
     hoisted.getCookies.mockResolvedValue({});
 
-    await expect(
-      call("browser.removeCookie", "https://x", "MUSIC_U")
-    ).resolves.toEqual([0]);
+    await expect(call("browser.removeCookie", "https://x", "MUSIC_U")).resolves.toEqual([0]);
     expect(hoisted.removeCookie).not.toHaveBeenCalled();
   });
 });

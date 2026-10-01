@@ -101,15 +101,11 @@ const linuxBackend: ShutdownBackend = {
         // System is not available for shutdown.
         return ScheduleShutdownStatus.NotAvailable;
       }
-      const systemSchedule = scheduledShutdownRes.value as [
-        string | "",
-        number,
-      ];
+      const systemSchedule = scheduledShutdownRes.value as [string | "", number];
       // The shutdown schedule isn't managed by us.
       if (
         systemSchedule[0] &&
-        (systemSchedule[0] !== "poweroff" ||
-          systemSchedule[1] !== logindSchedule)
+        (systemSchedule[0] !== "poweroff" || systemSchedule[1] !== logindSchedule)
       ) {
         logindSchedule = null;
         return ScheduleShutdownStatus.ManagedExternally;
@@ -124,8 +120,7 @@ const linuxBackend: ShutdownBackend = {
       } else {
         // logind counts in microseconds; the app hands us milliseconds.
         const shutdownTime = time.valueOf() * 1000;
-        if (shutdownTime === logindSchedule)
-          return ScheduleShutdownStatus.AlreadySet;
+        if (shutdownTime === logindSchedule) return ScheduleShutdownStatus.AlreadySet;
         await client.call({
           ...LOGIND_MANAGER,
           method: "ScheduleShutdown",
@@ -137,10 +132,7 @@ const linuxBackend: ShutdownBackend = {
     } catch (err) {
       // The system refused the request (or it could not be delivered). Report it
       // so the caller knows the schedule is not what it asked for.
-      LOGGER.warn(
-        { err: toError(err), time },
-        "Failed to update shutdown schedule"
-      );
+      LOGGER.warn({ err: toError(err), time }, "Failed to update shutdown schedule");
       return ScheduleShutdownStatus.Failed;
     }
     return ScheduleShutdownStatus.Ok;
@@ -174,9 +166,7 @@ let windowsSchedule: number | null = null;
  */
 let systemModule: typeof import("@open-orpheus/system-win32") | null = null;
 
-async function getSystemModule(): Promise<
-  typeof import("@open-orpheus/system-win32")
-> {
+async function getSystemModule(): Promise<typeof import("@open-orpheus/system-win32")> {
   systemModule ??= await import("@open-orpheus/system-win32");
   return systemModule;
 }
@@ -207,8 +197,7 @@ const win32Backend: ShutdownBackend = {
       windowsSchedule = null;
       return ScheduleShutdownStatus.Ok;
     }
-    if (time.valueOf() === windowsSchedule)
-      return ScheduleShutdownStatus.AlreadySet;
+    if (time.valueOf() === windowsSchedule) return ScheduleShutdownStatus.AlreadySet;
 
     // The caller has already dropped the countdown it had (see `calls/os.ts`), so
     // a failed arm must not leave that older one in place: the machine would go
@@ -219,10 +208,7 @@ const win32Backend: ShutdownBackend = {
     try {
       system = await getSystemModule();
     } catch (err) {
-      LOGGER.warn(
-        { err: toError(err) },
-        "Failed to load the Windows system module"
-      );
+      LOGGER.warn({ err: toError(err) }, "Failed to load the Windows system module");
       return ScheduleShutdownStatus.NotAvailable;
     }
 
@@ -232,10 +218,7 @@ const win32Backend: ShutdownBackend = {
       if (!system.canShutdown()) return ScheduleShutdownStatus.NotAvailable;
       windowsSchedule = time.valueOf();
     } catch (err) {
-      LOGGER.warn(
-        { err: toError(err), time },
-        "Failed to check the Windows shutdown privilege"
-      );
+      LOGGER.warn({ err: toError(err), time }, "Failed to check the Windows shutdown privilege");
       return ScheduleShutdownStatus.Failed;
     }
     return ScheduleShutdownStatus.Ok;
@@ -250,10 +233,7 @@ const win32Backend: ShutdownBackend = {
       const system = await getSystemModule();
       system.shutdownNow(WINDOWS_SHUTDOWN_MESSAGE, WINDOWS_FORCE_CLOSE_APPS);
     } catch (err) {
-      LOGGER.warn(
-        { err: toError(err) },
-        "Failed to power off after the scheduled shutdown"
-      );
+      LOGGER.warn({ err: toError(err) }, "Failed to power off after the scheduled shutdown");
       // The machine is staying on although the user asked for it to go down, so
       // report that while there is still a process to report it from.
       reportPowerOffFailure?.();
@@ -313,15 +293,11 @@ function enqueue<T>(request: () => Promise<T>): Promise<T> {
  * Failures are reported as {@link ScheduleShutdownStatus.Failed} rather than
  * rejected, so callers (including IPC handlers) always get an answer.
  */
-export function setScheduledShutdown(
-  time?: Date
-): Promise<ScheduleShutdownStatus> {
+export function setScheduledShutdown(time?: Date): Promise<ScheduleShutdownStatus> {
   return enqueue(() => applyScheduledShutdown(time));
 }
 
-async function applyScheduledShutdown(
-  time?: Date
-): Promise<ScheduleShutdownStatus> {
+async function applyScheduledShutdown(time?: Date): Promise<ScheduleShutdownStatus> {
   if (!backend) return ScheduleShutdownStatus.NotAvailable;
   return backend.apply(time);
 }
@@ -350,14 +326,8 @@ registerShutdownTask({
     // Nothing to do when this app has no schedule (and none is being created).
     if (!hasManagedScheduledShutdown()) return;
     const status = await setScheduledShutdown();
-    if (
-      status !== ScheduleShutdownStatus.Ok &&
-      status !== ScheduleShutdownStatus.AlreadySet
-    ) {
-      LOGGER.warn(
-        { status },
-        "Failed to cancel the scheduled shutdown on exit"
-      );
+    if (status !== ScheduleShutdownStatus.Ok && status !== ScheduleShutdownStatus.AlreadySet) {
+      LOGGER.warn({ status }, "Failed to cancel the scheduled shutdown on exit");
     }
   },
 });

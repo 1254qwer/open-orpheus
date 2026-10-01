@@ -82,14 +82,10 @@ vi.mock("@open-orpheus/dbus", () => {
 // `shutdown.ts` only needs the registration hooks; importing the real module
 // would pull Electron in.
 vi.mock("../../src/main/lifecycle", () => ({
-  registerShutdownTask: (task: {
-    name: string;
-    run: () => void | Promise<void>;
-  }) => hoisted.tasks.push(task),
-  registerShutdownFinalizer: (finalizer: {
-    name: string;
-    run: () => void | Promise<void>;
-  }) => hoisted.finalizers.push(finalizer),
+  registerShutdownTask: (task: { name: string; run: () => void | Promise<void> }) =>
+    hoisted.tasks.push(task),
+  registerShutdownFinalizer: (finalizer: { name: string; run: () => void | Promise<void> }) =>
+    hoisted.finalizers.push(finalizer),
 }));
 
 // The Windows module's *shape* has to be able to differ per test (see
@@ -142,9 +138,7 @@ function task() {
  * cleanup tasks using up the shutdown deadline.
  */
 function finalizer() {
-  const found = hoisted.finalizers.find(
-    (f) => f.name === "scheduled-shutdown-poweroff"
-  );
+  const found = hoisted.finalizers.find((f) => f.name === "scheduled-shutdown-poweroff");
   if (!found) throw new Error("the power-off finalizer was not registered");
   return found;
 }
@@ -181,31 +175,26 @@ describe("setScheduledShutdown", () => {
     hoisted.failConstruct = true;
     const { ScheduleShutdownStatus, setScheduledShutdown } = await loadModule();
 
-    await expect(setScheduledShutdown(new Date())).resolves.toBe(
-      ScheduleShutdownStatus.Failed
-    );
+    await expect(setScheduledShutdown(new Date())).resolves.toBe(ScheduleShutdownStatus.Failed);
   });
 
   it("reports failure when the system refuses the request", async () => {
     hoisted.failSchedule = true;
     const { ScheduleShutdownStatus, setScheduledShutdown } = await loadModule();
 
-    await expect(
-      setScheduledShutdown(new Date(Date.now() + 60_000))
-    ).resolves.toBe(ScheduleShutdownStatus.Failed);
+    await expect(setScheduledShutdown(new Date(Date.now() + 60_000))).resolves.toBe(
+      ScheduleShutdownStatus.Failed
+    );
   });
 
   it("leaves an external schedule alone", async () => {
     hoisted.scheduled = ["poweroff", 1_234_567];
-    const {
-      ScheduleShutdownStatus,
-      setScheduledShutdown,
-      hasManagedScheduledShutdown,
-    } = await loadModule();
+    const { ScheduleShutdownStatus, setScheduledShutdown, hasManagedScheduledShutdown } =
+      await loadModule();
 
-    await expect(
-      setScheduledShutdown(new Date(Date.now() + 60_000))
-    ).resolves.toBe(ScheduleShutdownStatus.ManagedExternally);
+    await expect(setScheduledShutdown(new Date(Date.now() + 60_000))).resolves.toBe(
+      ScheduleShutdownStatus.ManagedExternally
+    );
     expect(hoisted.calls).toEqual(["CanPowerOff"]);
     expect(hasManagedScheduledShutdown()).toBe(false);
   });
@@ -213,18 +202,13 @@ describe("setScheduledShutdown", () => {
   it("treats a cancel with no managed schedule as already satisfied", async () => {
     const { ScheduleShutdownStatus, setScheduledShutdown } = await loadModule();
 
-    await expect(setScheduledShutdown()).resolves.toBe(
-      ScheduleShutdownStatus.AlreadySet
-    );
+    await expect(setScheduledShutdown()).resolves.toBe(ScheduleShutdownStatus.AlreadySet);
     expect(hoisted.calls).toEqual(["CanPowerOff"]);
   });
 
   it("runs a cancel issued during a set after the set, not before it", async () => {
-    const {
-      ScheduleShutdownStatus,
-      setScheduledShutdown,
-      hasManagedScheduledShutdown,
-    } = await loadModule();
+    const { ScheduleShutdownStatus, setScheduledShutdown, hasManagedScheduledShutdown } =
+      await loadModule();
 
     hoisted.gateSchedule = true;
     const set = setScheduledShutdown(new Date(Date.now() + 60_000));
@@ -247,8 +231,7 @@ describe("setScheduledShutdown", () => {
 
 describe("shutdown task", () => {
   it("cancels the schedule this app owns on a normal quit", async () => {
-    const { setScheduledShutdown, hasManagedScheduledShutdown } =
-      await loadModule();
+    const { setScheduledShutdown, hasManagedScheduledShutdown } = await loadModule();
     await setScheduledShutdown(new Date(Date.now() + 60_000));
 
     await task().run();
@@ -258,11 +241,8 @@ describe("shutdown task", () => {
   });
 
   it("keeps the schedule when the countdown itself triggers the quit", async () => {
-    const {
-      setScheduledShutdown,
-      keepScheduledShutdownOnExit,
-      hasManagedScheduledShutdown,
-    } = await loadModule();
+    const { setScheduledShutdown, keepScheduledShutdownOnExit, hasManagedScheduledShutdown } =
+      await loadModule();
     await setScheduledShutdown(new Date(Date.now() + 60_000));
 
     keepScheduledShutdownOnExit();
@@ -276,15 +256,12 @@ describe("shutdown task", () => {
 describe("setScheduledShutdown (win32)", () => {
   it("arms the countdown after checking the machine can be powered off", async () => {
     useWindows();
-    const {
-      ScheduleShutdownStatus,
-      setScheduledShutdown,
-      hasManagedScheduledShutdown,
-    } = await loadModule();
+    const { ScheduleShutdownStatus, setScheduledShutdown, hasManagedScheduledShutdown } =
+      await loadModule();
 
-    await expect(
-      setScheduledShutdown(new Date(Date.now() + HOUR))
-    ).resolves.toBe(ScheduleShutdownStatus.Ok);
+    await expect(setScheduledShutdown(new Date(Date.now() + HOUR))).resolves.toBe(
+      ScheduleShutdownStatus.Ok
+    );
     expect(hoisted.win32Calls).toEqual(["canShutdown"]);
     expect(hasManagedScheduledShutdown()).toBe(true);
   });
@@ -292,30 +269,24 @@ describe("setScheduledShutdown (win32)", () => {
   it("reports a machine that cannot be powered off before the deadline", async () => {
     useWindows();
     hoisted.canShutdown = false;
-    const {
-      ScheduleShutdownStatus,
-      setScheduledShutdown,
-      hasManagedScheduledShutdown,
-    } = await loadModule();
+    const { ScheduleShutdownStatus, setScheduledShutdown, hasManagedScheduledShutdown } =
+      await loadModule();
 
-    await expect(
-      setScheduledShutdown(new Date(Date.now() + HOUR))
-    ).resolves.toBe(ScheduleShutdownStatus.NotAvailable);
+    await expect(setScheduledShutdown(new Date(Date.now() + HOUR))).resolves.toBe(
+      ScheduleShutdownStatus.NotAvailable
+    );
     expect(hasManagedScheduledShutdown()).toBe(false);
   });
 
   it("reports failure when the privilege cannot be checked", async () => {
     useWindows();
     hoisted.canShutdownError = true;
-    const {
-      ScheduleShutdownStatus,
-      setScheduledShutdown,
-      hasManagedScheduledShutdown,
-    } = await loadModule();
+    const { ScheduleShutdownStatus, setScheduledShutdown, hasManagedScheduledShutdown } =
+      await loadModule();
 
-    await expect(
-      setScheduledShutdown(new Date(Date.now() + HOUR))
-    ).resolves.toBe(ScheduleShutdownStatus.Failed);
+    await expect(setScheduledShutdown(new Date(Date.now() + HOUR))).resolves.toBe(
+      ScheduleShutdownStatus.Failed
+    );
     expect(hasManagedScheduledShutdown()).toBe(false);
   });
 
@@ -324,34 +295,27 @@ describe("setScheduledShutdown (win32)", () => {
     hoisted.failSystemModule = true;
     const { ScheduleShutdownStatus, setScheduledShutdown } = await loadModule();
 
-    await expect(
-      setScheduledShutdown(new Date(Date.now() + HOUR))
-    ).resolves.toBe(ScheduleShutdownStatus.NotAvailable);
+    await expect(setScheduledShutdown(new Date(Date.now() + HOUR))).resolves.toBe(
+      ScheduleShutdownStatus.NotAvailable
+    );
   });
 
   it("treats a cancel with no countdown of ours as already satisfied", async () => {
     useWindows();
     const { ScheduleShutdownStatus, setScheduledShutdown } = await loadModule();
 
-    await expect(setScheduledShutdown()).resolves.toBe(
-      ScheduleShutdownStatus.AlreadySet
-    );
+    await expect(setScheduledShutdown()).resolves.toBe(ScheduleShutdownStatus.AlreadySet);
     // Nothing is registered with Windows, so a cancel needs no native call.
     expect(hoisted.win32Calls).toEqual([]);
   });
 
   it("cancels without asking the system for anything", async () => {
     useWindows();
-    const {
-      ScheduleShutdownStatus,
-      setScheduledShutdown,
-      hasManagedScheduledShutdown,
-    } = await loadModule();
+    const { ScheduleShutdownStatus, setScheduledShutdown, hasManagedScheduledShutdown } =
+      await loadModule();
 
     await setScheduledShutdown(new Date(Date.now() + HOUR));
-    await expect(setScheduledShutdown()).resolves.toBe(
-      ScheduleShutdownStatus.Ok
-    );
+    await expect(setScheduledShutdown()).resolves.toBe(ScheduleShutdownStatus.Ok);
 
     expect(hoisted.win32Calls).toEqual(["canShutdown"]);
     expect(hasManagedScheduledShutdown()).toBe(false);
@@ -363,9 +327,7 @@ describe("setScheduledShutdown (win32)", () => {
     const time = new Date(Date.now() + HOUR);
 
     await setScheduledShutdown(time);
-    await expect(setScheduledShutdown(time)).resolves.toBe(
-      ScheduleShutdownStatus.AlreadySet
-    );
+    await expect(setScheduledShutdown(time)).resolves.toBe(ScheduleShutdownStatus.AlreadySet);
 
     expect(hoisted.win32Calls).toEqual(["canShutdown"]);
   });
@@ -374,11 +336,8 @@ describe("setScheduledShutdown (win32)", () => {
 describe("exit path (win32)", () => {
   it("powers the machine off from the finalizer when the countdown completed", async () => {
     useWindows();
-    const {
-      setScheduledShutdown,
-      keepScheduledShutdownOnExit,
-      setPowerOffFailureHandler,
-    } = await loadModule();
+    const { setScheduledShutdown, keepScheduledShutdownOnExit, setPowerOffFailureHandler } =
+      await loadModule();
     const refused = vi.fn();
     setPowerOffFailureHandler(refused);
     await setScheduledShutdown(new Date(Date.now() + 60_000));
@@ -394,8 +353,7 @@ describe("exit path (win32)", () => {
 
   it("keeps the machine on when the quit was not the countdown's", async () => {
     useWindows();
-    const { setScheduledShutdown, hasManagedScheduledShutdown } =
-      await loadModule();
+    const { setScheduledShutdown, hasManagedScheduledShutdown } = await loadModule();
     await setScheduledShutdown(new Date(Date.now() + 60_000));
 
     await task().run();
@@ -408,11 +366,8 @@ describe("exit path (win32)", () => {
   it("reports the refusal when the power-off is refused", async () => {
     useWindows();
     hoisted.shutdownNowError = true;
-    const {
-      setScheduledShutdown,
-      keepScheduledShutdownOnExit,
-      setPowerOffFailureHandler,
-    } = await loadModule();
+    const { setScheduledShutdown, keepScheduledShutdownOnExit, setPowerOffFailureHandler } =
+      await loadModule();
     const refused = vi.fn();
     setPowerOffFailureHandler(refused);
     await setScheduledShutdown(new Date(Date.now() + 60_000));
@@ -438,9 +393,9 @@ describe("exit path (win32)", () => {
 
     // Changing the time is checked again, and this time the machine refuses.
     hoisted.canShutdown = false;
-    await expect(
-      setScheduledShutdown(new Date(Date.now() + 2 * HOUR))
-    ).resolves.toBe(ScheduleShutdownStatus.NotAvailable);
+    await expect(setScheduledShutdown(new Date(Date.now() + 2 * HOUR))).resolves.toBe(
+      ScheduleShutdownStatus.NotAvailable
+    );
 
     // The caller tells the user that the new time will not take effect, so this
     // app must not power the machine off at it either.

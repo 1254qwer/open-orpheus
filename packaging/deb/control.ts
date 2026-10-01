@@ -5,10 +5,7 @@ import ejs from "ejs";
 
 import type { MakerDebOptions } from "../types.ts";
 
-const template = resolve(
-  import.meta.dirname,
-  "../resources/debian/control.ejs"
-);
+const template = resolve(import.meta.dirname, "../resources/debian/control.ejs");
 
 export interface ControlOptions {
   name: string;
@@ -47,9 +44,7 @@ export function resolveControlOptions(
     section: options.section ?? "sound",
     maintainer: options.maintainer ?? formatMaintainer(pkg.author),
     homepage: options.homepage ?? pkg.homepage ?? "",
-    description: normalizeDescription(
-      options.description ?? pkg.description ?? ""
-    ),
+    description: normalizeDescription(options.description ?? pkg.description ?? ""),
   };
 }
 

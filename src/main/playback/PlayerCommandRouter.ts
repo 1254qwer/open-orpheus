@@ -92,11 +92,7 @@ export default class PlayerCommandRouter {
 
     if (target === PlaybackStatus.Playing) {
       // No retained track to resume (the controller forces Stopped with none).
-      if (
-        from === PlaybackStatus.Stopped &&
-        this.player.snapshot.track === null
-      )
-        return;
+      if (from === PlaybackStatus.Stopped && this.player.snapshot.track === null) return;
     } else if (from !== PlaybackStatus.Playing) {
       return;
     }
@@ -110,9 +106,7 @@ export default class PlayerCommandRouter {
    */
   private toggle(): void {
     this.toggleTowards(
-      this.intended === PlaybackStatus.Playing
-        ? PlaybackStatus.Paused
-        : PlaybackStatus.Playing
+      this.intended === PlaybackStatus.Playing ? PlaybackStatus.Paused : PlaybackStatus.Playing
     );
   }
 
@@ -207,11 +201,6 @@ export default class PlayerCommandRouter {
   }
 
   private sendHotkey(name: string): void {
-    mainWindow?.webContents.send(
-      "channel.call",
-      "winhelper.onHotkey",
-      name,
-      true
-    );
+    mainWindow?.webContents.send("channel.call", "winhelper.onHotkey", name, true);
   }
 }

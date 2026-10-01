@@ -13,10 +13,7 @@ export default defineConfig({
   base: "",
   resolve: {
     alias: {
-      $sharedTypes: path.resolve(
-        path.dirname(fileURLToPath(import.meta.url)),
-        "types"
-      ),
+      $sharedTypes: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "types"),
     },
   },
   build: {

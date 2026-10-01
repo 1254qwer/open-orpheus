@@ -1,8 +1,7 @@
 import { app } from "electron";
 
 export const isProtocolClient = () => app.isDefaultProtocolClient("orpheus");
-export const getProtocolClientName = () =>
-  app.getApplicationNameForProtocol("orpheus://");
+export const getProtocolClientName = () => app.getApplicationNameForProtocol("orpheus://");
 
 export function unregisterAsProtocolClient() {
   if (!isProtocolClient()) return false;

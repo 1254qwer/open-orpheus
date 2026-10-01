@@ -13,9 +13,7 @@ import { readFile } from "node:fs/promises";
 
 import { vol } from "memfs";
 
-import PlayCacheManager, {
-  type CacheTrackMeta,
-} from "../../src/main/cache/PlayCacheManager";
+import PlayCacheManager, { type CacheTrackMeta } from "../../src/main/cache/PlayCacheManager";
 
 const CACHE_PATH = "/cache/play";
 const MiB = 1024 * 1024;
@@ -53,13 +51,9 @@ const trackInfo = {
 function notifications() {
   return hoisted.send.mock.calls
     .filter(
-      ([channel, command]) =>
-        channel === "channel.call" && command === "storage.onPlayCacheUpdate"
+      ([channel, command]) => channel === "channel.call" && command === "storage.onPlayCacheUpdate"
     )
-    .map(
-      ([, , payload]) =>
-        payload as { songId: string; playCacheUpdateType: number }
-    );
+    .map(([, , payload]) => payload as { songId: string; playCacheUpdateType: number });
 }
 
 beforeEach(() => {
@@ -103,12 +97,8 @@ describe("PlayCacheManager.cacheTrack", () => {
 
     await cache.cacheTrack("123", Buffer.from("audio-bytes"), trackInfo);
 
-    await expect(readFile(`${CACHE_PATH}/123/audio`, "utf-8")).resolves.toBe(
-      "audio-bytes"
-    );
-    const stored = JSON.parse(
-      await readFile(`${CACHE_PATH}/123/meta.json`, "utf-8")
-    );
+    await expect(readFile(`${CACHE_PATH}/123/audio`, "utf-8")).resolves.toBe("audio-bytes");
+    const stored = JSON.parse(await readFile(`${CACHE_PATH}/123/meta.json`, "utf-8"));
     expect(stored).toMatchObject({
       songId: "123",
       md5: "md5",
@@ -291,9 +281,7 @@ describe("PlayCacheManager eviction", () => {
     await cache.cacheTrack("1", Buffer.from("a"), trackInfo);
 
     await expect(cache.queryCacheTracks()).resolves.toHaveLength(1);
-    expect(notifications().some((n) => n.playCacheUpdateType === 2)).toBe(
-      false
-    );
+    expect(notifications().some((n) => n.playCacheUpdateType === 2)).toBe(false);
   });
 });
 

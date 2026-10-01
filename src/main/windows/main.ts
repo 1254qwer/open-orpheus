@@ -8,14 +8,8 @@ import { ManagedWindow, setMainWindow } from "../window";
 import { window as miniPlayerWindow } from "./mini-player";
 import { LifecycleState, setLifecycleState } from "../lifecycle";
 
-function getWindowState(
-  wnd: BrowserWindow
-): "minimize" | "maximize" | "restore" {
-  return wnd.isMinimized()
-    ? "minimize"
-    : wnd.isMaximized()
-      ? "maximize"
-      : "restore";
+function getWindowState(wnd: BrowserWindow): "minimize" | "maximize" | "restore" {
+  return wnd.isMinimized() ? "minimize" : wnd.isMaximized() ? "maximize" : "restore";
 }
 
 function getWindowSizeStatus(
@@ -39,28 +33,25 @@ const mainWindowOptions = {
   show: false,
   frame: false,
   webPreferences: {
-    preload: path.join(import.meta.dirname, "preload.js"),
+    preload: path.join(import.meta.dirname, "preload.cjs"),
     additionalArguments: ["--preload-channel=main"],
   },
 } satisfies BrowserWindowConstructorOptions;
 
 /** Wire the main window's cross-window behaviour and lifecycle. */
 function setupMainWindow(mainWindow: BrowserWindow) {
-  [
-    "maximize",
-    "minimize",
-    "restore",
-    os.platform() === "linux" ? "resize" : "resized",
-  ].forEach((event) => {
-    mainWindow.on(event as unknown as "maximize", () => {
-      // resize is triggered instead of restore on Linux (Wayland)
-      mainWindow.webContents.send(
-        "channel.call",
-        "winhelper.onSizeStatus",
-        ...getWindowSizeStatus(mainWindow)
-      );
-    });
-  });
+  ["maximize", "minimize", "restore", os.platform() === "linux" ? "resize" : "resized"].forEach(
+    (event) => {
+      mainWindow.on(event as unknown as "maximize", () => {
+        // resize is triggered instead of restore on Linux (Wayland)
+        mainWindow.webContents.send(
+          "channel.call",
+          "winhelper.onSizeStatus",
+          ...getWindowSizeStatus(mainWindow)
+        );
+      });
+    }
+  );
 
   const sendResizeDone = () => {
     const bounds = mainWindow.getBounds();
@@ -97,7 +88,7 @@ function setupMainWindow(mainWindow: BrowserWindow) {
 
   mainWindow.on("show", () => {
     // Make sure mini player doesn't show together with main window
-    miniPlayerWindow.hide();
+    void miniPlayerWindow.hide();
   });
 
   setLifecycleState(LifecycleState.MainWindowCreated, mainWindow);
@@ -112,9 +103,7 @@ class MainWindow extends ManagedWindow {
   constructor() {
     super();
     // Closing the main window asks the app to shut down; quitting closes it.
-    this.requestCloseApproval(() =>
-      this.send("channel.call", "winhelper.onclose")
-    );
+    this.requestCloseApproval(() => this.send("channel.call", "winhelper.onclose"));
     setupMainWindow(this.createBrowserWindow(mainWindowOptions));
   }
 }

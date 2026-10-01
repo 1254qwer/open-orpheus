@@ -123,7 +123,7 @@ export default class AppMenu extends Emittery<AppMenuEvents> {
     } else {
       destroyMenuWindow();
     }
-    this.emit("close");
+    void this.emit("close");
   }
 
   update(patchItems: AppMenuItem[]) {
@@ -135,11 +135,7 @@ export default class AppMenu extends Emittery<AppMenuEvents> {
 
     if (getDesktopEnvironment() === DesktopEnvironment.Wayland) {
       const overlayWindow = getOverlayWindow();
-      if (
-        overlayWindow &&
-        !overlayWindow.isDestroyed() &&
-        overlayWindow.isVisible()
-      ) {
+      if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
         overlayWindow.webContents.send("menu.update", this.items);
       }
       return;
@@ -155,31 +151,26 @@ export default class AppMenu extends Emittery<AppMenuEvents> {
   // Created fresh each time so the compositor sends pointer-enter,
   // which the renderer uses to capture the real cursor position.
   private showOverlay() {
-    const cursorPosition = new Promise<{ cursorX: number; cursorY: number }>(
-      (resolve) => {
-        let settled = false;
-        const finish = (cursorX = 0, cursorY = 0) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(deadline);
-          resolve({ cursorX, cursorY });
-        };
+    const cursorPosition = new Promise<{ cursorX: number; cursorY: number }>((resolve) => {
+      let settled = false;
+      const finish = (cursorX = 0, cursorY = 0) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(deadline);
+        resolve({ cursorX, cursorY });
+      };
 
-        const deadline = setTimeout(
-          () => finish(),
-          WAYLAND_CURSOR_CAPTURE_DEADLINE_MS
-        );
+      const deadline = setTimeout(() => finish(), WAYLAND_CURSOR_CAPTURE_DEADLINE_MS);
 
-        try {
-          captureNextWindowFirstCursorEnter((cursorX, cursorY) => {
-            finish(cursorX, cursorY);
-          });
-        } catch {
-          finish();
-          return;
-        }
+      try {
+        captureNextWindowFirstCursorEnter((cursorX, cursorY) => {
+          finish(cursorX, cursorY);
+        });
+      } catch {
+        finish();
+        return;
       }
-    );
+    });
 
     const wnd = createOverlayWindow();
 

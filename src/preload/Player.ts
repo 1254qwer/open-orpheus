@@ -58,15 +58,7 @@ export type AudioPlayInfo = {
   aiprocessorRatio: number;
   destLevel: string;
   songId: string;
-  songQuality:
-    | "standard"
-    | "exhigh"
-    | "hires"
-    | "jyeffect"
-    | "vivid"
-    | "sky"
-    | "jymaster"
-    | string;
+  songQuality: "standard" | "exhigh" | "hires" | "jyeffect" | "vivid" | "sky" | "jymaster" | string;
 } & (
   | {
       type: 0;
@@ -407,8 +399,7 @@ export default class Player extends Emittery<PlayerEvents> {
       try {
         source.disconnect(node);
       } catch (err) {
-        if (err instanceof DOMException && err.name === "InvalidAccessError")
-          return;
+        if (err instanceof DOMException && err.name === "InvalidAccessError") return;
         throw err;
       }
     }
@@ -419,11 +410,7 @@ export default class Player extends Emittery<PlayerEvents> {
    * only when `source` is the currently active backend (so a retired backend's
    * late events never leak through).
    */
-  private onBackendEvent(
-    source: PlaybackBackend,
-    name: PlaybackEventName,
-    data?: unknown
-  ): void {
+  private onBackendEvent(source: PlaybackBackend, name: PlaybackEventName, data?: unknown): void {
     if (source !== this._backend) return;
     switch (name) {
       case "load":
@@ -434,10 +421,9 @@ export default class Player extends Emittery<PlayerEvents> {
         break;
       default: {
         // The remaining events carry no payload.
-        const emit = this.emit as (
-          eventName: PlaybackEventName
-        ) => Promise<void>;
-        void emit(name);
+        // Keep this a member call: Emittery's `emit` relies on `this`, so
+        // copying it into a local first would lose the receiver.
+        void (this.emit as (eventName: PlaybackEventName) => Promise<void>)(name);
         break;
       }
     }

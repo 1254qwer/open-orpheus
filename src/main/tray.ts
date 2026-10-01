@@ -1,14 +1,7 @@
 import os from "node:os";
 import { resolve } from "node:path";
 
-import {
-  app,
-  Menu,
-  MenuItemConstructorOptions,
-  nativeImage,
-  NativeImage,
-  Tray,
-} from "electron";
+import { app, Menu, MenuItemConstructorOptions, nativeImage, NativeImage, Tray } from "electron";
 
 import { mainWindow } from "./window";
 import { registerShutdownTask } from "./lifecycle";
@@ -30,19 +23,9 @@ const defaultMenuItems: MenuItemConstructorOptions[] = [
   {
     label: "退出",
     click: () => {
-      if (
-        trayInstalled &&
-        !quitRequested &&
-        mainWindow &&
-        !mainWindow.isDestroyed()
-      ) {
+      if (trayInstalled && !quitRequested && mainWindow && !mainWindow.isDestroyed()) {
         // NCM seems to be ready, and is not , we will go with graceful way as of now
-        mainWindow.webContents.send(
-          "channel.call",
-          "winhelper.onmenuclick",
-          "exitApp",
-          0
-        );
+        mainWindow.webContents.send("channel.call", "winhelper.onmenuclick", "exitApp", 0);
         quitRequested = true;
         return;
       }
@@ -56,9 +39,7 @@ export let trayInstalled = false;
 let icon: NativeImage | null = null;
 let tooltip: string | null = null;
 
-const defaultIcon = createIconForDarwin(
-  nativeImage.createFromPath(defaultIconPath)
-);
+const defaultIcon = createIconForDarwin(nativeImage.createFromPath(defaultIconPath));
 
 const trayIcon = new Tray(defaultIcon);
 
@@ -145,10 +126,7 @@ export function install() {
           click: () => {
             // Although it can't be non-existing...
             if (!mainWindow || mainWindow.isDestroyed()) return;
-            mainWindow.webContents.send(
-              "channel.call",
-              "trayicon.onrightclick"
-            );
+            mainWindow.webContents.send("channel.call", "trayicon.onrightclick");
           },
         },
         {

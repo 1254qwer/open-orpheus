@@ -54,11 +54,7 @@ registerCallHandler<[DownloadStartRequest], void>(
       try {
         headers = JSON.parse(ext_header);
       } catch (error) {
-        LOGGER.error(
-          { json: ext_header },
-          "Failed to parse ext_header: %s",
-          error
-        );
+        LOGGER.error({ json: ext_header }, "Failed to parse ext_header: %s", error);
       }
     }
 
@@ -127,33 +123,24 @@ registerCallHandler<[DownloadStartRequest], void>(
   }
 );
 
-registerCallHandler<[string], void>(
-  "download.pause",
-  async (event, id: string) => {
-    const task = downloadTasks.get(id);
-    if (task) {
-      task.pause();
-    }
+registerCallHandler<[string], void>("download.pause", async (event, id: string) => {
+  const task = downloadTasks.get(id);
+  if (task) {
+    task.pause();
   }
-);
+});
 
-registerCallHandler<[string], void>(
-  "download.resume",
-  async (event, id: string) => {
-    const task = downloadTasks.get(id);
-    if (task) {
-      task.resume();
-    }
+registerCallHandler<[string], void>("download.resume", async (event, id: string) => {
+  const task = downloadTasks.get(id);
+  if (task) {
+    task.resume();
   }
-);
+});
 
-registerCallHandler<[string], void>(
-  "download.cancel",
-  async (event, id: string) => {
-    const task = downloadTasks.get(id);
-    if (task) {
-      await task.cancel();
-      downloadTasks.delete(id);
-    }
+registerCallHandler<[string], void>("download.cancel", async (event, id: string) => {
+  const task = downloadTasks.get(id);
+  if (task) {
+    await task.cancel();
+    downloadTasks.delete(id);
   }
-);
+});

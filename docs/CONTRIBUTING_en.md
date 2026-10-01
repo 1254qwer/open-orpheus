@@ -163,7 +163,7 @@ Automated tests currently cover part of the project (`pnpm test`, with a coverag
 
 ### Code Style
 
-- TypeScript / JavaScript: The project uses ESLint. Make sure there are no lint errors before submitting (`pnpm lint`).
+- TypeScript / JavaScript: The main codebase is linted with [Oxlint](https://oxc.rs) and formatted with [Oxfmt](https://oxc.rs) (config: `.oxlintrc.json`, `.oxfmtrc.json`), while the SvelteKit code under `gui/` is linted with ESLint (config: `gui/eslint.config.js`). Make sure there are no lint errors before submitting (`pnpm lint`), and that your code is formatted (`pnpm format`).
 - Rust: Follow standard `rustfmt` style (`cargo fmt`).
 - Commit messages should be in English. The [Conventional Commits](https://www.conventionalcommits.org/) format is recommended.
 

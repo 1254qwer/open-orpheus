@@ -1,11 +1,6 @@
 import type { MakerSquirrelConfig } from "@electron-forge/maker-squirrel";
-import type { MakerAppImageConfigOptions } from "@reforged/maker-appimage";
 
-import type {
-  MakerDebOptions,
-  MakerFlatpakOptions,
-  MakerRpmOptions,
-} from "./types.ts";
+import type { MakerDebOptions, MakerFlatpakOptions, MakerRpmOptions } from "./types.ts";
 
 export const squirrel: MakerSquirrelConfig = {
   name: "OpenOrpheus",
@@ -48,7 +43,7 @@ export const flatpak: MakerFlatpakOptions = {
   ],
 };
 
-export const AppImage: MakerAppImageConfigOptions = {
+export const AppImage = {
   name: "open-orpheus",
   productName: "Open Orpheus",
   icon: "assets/icon_256.png",

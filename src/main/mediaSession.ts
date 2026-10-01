@@ -5,10 +5,7 @@ import { events as lifecycleEvents, registerShutdownTask } from "./lifecycle";
 import { resolveCoverUrl } from "./playback/artwork";
 import PlaybackController from "./playback/PlaybackController";
 import { PlaybackChange, TrackInfo } from "./playback/types";
-import {
-  MediaSessionAdapter,
-  NoopAdapter,
-} from "./playback/adapters/MediaSessionAdapter";
+import { MediaSessionAdapter, NoopAdapter } from "./playback/adapters/MediaSessionAdapter";
 import PlayerCommandRouter from "./playback/PlayerCommandRouter";
 
 /**
@@ -74,18 +71,12 @@ export async function createMediaSession(): Promise<void> {
       // MPRIS is Linux-only (`@open-orpheus/dbus`); load the adapter only here.
       // Constructing it registers a D-Bus name and throws when the session bus
       // is unavailable — `loadAdapter` degrades gracefully instead of aborting.
-      adapter = await loadAdapter(
-        () => import("./playback/adapters/MprisAdapter"),
-        "MPRIS"
-      );
+      adapter = await loadAdapter(() => import("./playback/adapters/MprisAdapter"), "MPRIS");
       break;
     case "win32":
       // `@open-orpheus/system-win32` is a Windows-only native module, so it is
       // only loaded on this platform (kept out of other platform bundles).
-      adapter = await loadAdapter(
-        () => import("./playback/adapters/SmtcAdapter"),
-        "SMTC"
-      );
+      adapter = await loadAdapter(() => import("./playback/adapters/SmtcAdapter"), "SMTC");
       break;
     case "darwin":
       // `@open-orpheus/nowplaying` is a macOS-only native module (MPNowPlayingInfoCenter).
@@ -108,9 +99,7 @@ export async function createMediaSession(): Promise<void> {
   playbackController.on("positionchanged", ({ data }) =>
     adapter.onPosition(data.position, data.seeked)
   );
-  playbackController.on("durationchanged", ({ data }) =>
-    adapter.onDuration(data)
-  );
+  playbackController.on("durationchanged", ({ data }) => adapter.onDuration(data));
   playbackController.on("ratechanged", ({ data }) => adapter.onRate(data));
   playbackController.on("volumechanged", ({ data }) => adapter.onVolume(data));
 
@@ -127,10 +116,7 @@ export function disposeMediaSession(): void {
   try {
     adapter.dispose();
   } catch (err) {
-    LOGGER.warn(
-      { err: toError(err) },
-      "Failed to dispose the media session adapter"
-    );
+    LOGGER.warn({ err: toError(err) }, "Failed to dispose the media session adapter");
   }
 }
 

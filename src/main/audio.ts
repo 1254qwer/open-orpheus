@@ -43,9 +43,7 @@ registerShutdownTask({
 
 export async function readEffect(pathInfo: { path: string; pathtype: number }) {
   if (pathInfo.pathtype !== 2) {
-    throw new Error(
-      "Unsupported audio.readEffect pathtype: " + pathInfo.pathtype
-    );
+    throw new Error("Unsupported audio.readEffect pathtype: " + pathInfo.pathtype);
   }
   const path = sanitizeRelativePath(dataDir, pathInfo.path);
   if (path === false) {
@@ -84,17 +82,11 @@ export default function registerAudioStreamerScheme(protocol: Protocol) {
           return new Response(content, {
             status: 200,
             headers: {
-              "Content-Type": isWasm
-                ? "application/wasm"
-                : "application/javascript",
+              "Content-Type": isWasm ? "application/wasm" : "application/javascript",
             },
           });
         } catch (e) {
-          LOGGER.debug(
-            { scheme: "audio", path: workletPath },
-            "Failed to get worklet: %s",
-            e
-          );
+          LOGGER.debug({ scheme: "audio", path: workletPath }, "Failed to get worklet: %s", e);
           return new Response("Failed to load worklet", { status: 500 });
         }
       }
@@ -106,12 +98,8 @@ export default function registerAudioStreamerScheme(protocol: Protocol) {
         if (!type?.startsWith("audio/"))
           return new Response("Unsupported resource", { status: 400 });
 
-        const fullPath = sanitizeRelativePath(
-          join(packageDir, "resource"),
-          requestUrl.pathname
-        );
-        if (fullPath === false)
-          return new Response("Not Found", { status: 404 });
+        const fullPath = sanitizeRelativePath(join(packageDir, "resource"), requestUrl.pathname);
+        if (fullPath === false) return new Response("Not Found", { status: 404 });
 
         try {
           const content = await readFile(fullPath);
@@ -151,38 +139,25 @@ lifecycleEvents.on("mainwindowcreated", (e) => {
       try {
         return await readEffect(pathInfo);
       } catch (err) {
-        LOGGER.error(
-          { err: toError(err), pathInfo },
-          `Failed to read audio effect`
-        );
+        LOGGER.error({ err: toError(err), pathInfo }, `Failed to read audio effect`);
         return null;
       }
     }
   );
 
-  mainWindow.webContents.ipc.handle(
-    "audio.isAv3aFile",
-    async (_event, filePath: unknown) => {
-      if (typeof filePath !== "string" || filePath.length === 0) return false;
-      try {
-        return await isAv3aFile(filePath);
-      } catch (err) {
-        LOGGER.debug(
-          { err: toError(err), path: filePath },
-          `Failed to sniff file for AV3A`
-        );
-        return false;
-      }
+  mainWindow.webContents.ipc.handle("audio.isAv3aFile", async (_event, filePath: unknown) => {
+    if (typeof filePath !== "string" || filePath.length === 0) return false;
+    try {
+      return await isAv3aFile(filePath);
+    } catch (err) {
+      LOGGER.debug({ err: toError(err), path: filePath }, `Failed to sniff file for AV3A`);
+      return false;
     }
-  );
+  });
 
   mainWindow.webContents.ipc.handle(
     "audio.updatePlayInfo",
-    async (
-      _event,
-      playInfo: AudioPlayInfo | null,
-      engine: "media" | "av3a"
-    ) => {
+    async (_event, playInfo: AudioPlayInfo | null, engine: "media" | "av3a") => {
       // A new load always retires the previous engine first. Stopping either is
       // cheap when idle. The renderer awaits this handler before starting the
       // new engine, so this retirement always lands before it.

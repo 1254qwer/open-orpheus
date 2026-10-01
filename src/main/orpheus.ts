@@ -1,13 +1,5 @@
 import { basename, dirname, extname, join, resolve } from "node:path";
-import {
-  mkdir,
-  readdir,
-  readFile,
-  rename,
-  stat,
-  unlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
 import { Protocol } from "electron";
@@ -94,11 +86,8 @@ type SimpleResponse = {
 
 async function loadFromFilePath(path: string): Promise<SimpleResponse> {
   try {
-    const fileContent = await packManager
-      .getPack<WebPack>("web")
-      .readFile(path);
-    const contentType =
-      mime.getType(extname(path)) || "application/octet-stream";
+    const fileContent = await packManager.getPack<WebPack>("web").readFile(path);
+    const contentType = mime.getType(extname(path)) || "application/octet-stream";
     return { content: Buffer.from(fileContent), contentType };
   } catch {
     throw new LoadError("Not Found", 404);
@@ -147,8 +136,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
         }
         return {
           content: await readFile(filePath),
-          contentType:
-            mime.getType(extname(filePath)) || "application/octet-stream",
+          contentType: mime.getType(extname(filePath)) || "application/octet-stream",
           cacheable: false,
         };
       }
@@ -163,10 +151,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
         const fetchFromServer = wasmParams.get("fetchFromServer") === "true";
 
         if (!wasmUrl || !md5) {
-          throw new LoadError(
-            "Bad Request: Missing url or MD5 parameter for wasm",
-            400
-          );
+          throw new LoadError("Bad Request: Missing url or MD5 parameter for wasm", 400);
         }
         let fileExt: string;
         try {
@@ -208,10 +193,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
         }
         const actualMd5 = getMd5(buf);
         if (md5 !== actualMd5) {
-          throw new LoadError(
-            `Wasm MD5 mismatch: expected ${md5} but got ${actualMd5}`,
-            400
-          );
+          throw new LoadError(`Wasm MD5 mismatch: expected ${md5} but got ${actualMd5}`, 400);
         }
         if (shouldWriteCache) {
           await mkdir(wasm, { recursive: true });
@@ -220,25 +202,16 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
         if (type === "SDK") {
           const name = wasmParams.get("name");
           if (!name) {
-            throw new LoadError(
-              "Bad Request: Missing name parameter for wasm SDK",
-              400
-            );
+            throw new LoadError("Bad Request: Missing name parameter for wasm SDK", 400);
           }
           const zipper = await unzipper.Open.buffer(buf);
-          const file = zipper.files.find(
-            (f) => f.path.toLowerCase() === name.toLowerCase()
-          );
+          const file = zipper.files.find((f) => f.path.toLowerCase() === name.toLowerCase());
           if (!file) {
-            throw new LoadError(
-              `Wasm SDK zip did not contain the requested file: ${name}`,
-              404
-            );
+            throw new LoadError(`Wasm SDK zip did not contain the requested file: ${name}`, 404);
           }
           return {
             content: Buffer.from(await file.buffer()),
-            contentType:
-              mime.getType(extname(name)) || "application/octet-stream",
+            contentType: mime.getType(extname(name)) || "application/octet-stream",
           };
         } else if (type === "resource") {
           return {
@@ -261,35 +234,23 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
 
         // 1. Validate required parameters
         if (!id) {
-          throw new LoadError(
-            "Bad Request: Missing id parameter for custom skin",
-            400
-          );
+          throw new LoadError("Bad Request: Missing id parameter for custom skin", 400);
         }
         if (!name) {
-          throw new LoadError(
-            "Bad Request: Missing name parameter for custom skin",
-            400
-          );
+          throw new LoadError("Bad Request: Missing name parameter for custom skin", 400);
         }
 
         // Validate id does not escape the skin base directory
         const skinBaseDir = resolve(dataDir, "wasm/skin");
         const skinPath = sanitizeRelativePath(skinBaseDir, id);
         if (skinPath === false) {
-          throw new LoadError(
-            "Bad Request: Invalid id parameter for custom skin",
-            400
-          );
+          throw new LoadError("Bad Request: Invalid id parameter for custom skin", 400);
         }
 
         // Validate name does not escape skinPath
         const filePath = sanitizeRelativePath(skinPath, name);
         if (filePath === false) {
-          throw new LoadError(
-            "Bad Request: Invalid name parameter for custom skin",
-            400
-          );
+          throw new LoadError("Bad Request: Invalid name parameter for custom skin", 400);
         }
         const isImage = type === "image";
 
@@ -298,10 +259,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
 
         if (needsFetch) {
           if (!fileUrl) {
-            throw new LoadError(
-              "Bad Request: Missing url parameter to fetch custom skin",
-              400
-            );
+            throw new LoadError("Bad Request: Missing url parameter to fetch custom skin", 400);
           }
 
           // Verify fileUrl is a valid URL
@@ -354,10 +312,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
           buf = (await readFile(filePath)) as Buffer<ArrayBuffer>;
         } catch (err) {
           if (isFileNotFound(err)) {
-            throw new LoadError(
-              `Not Found: Custom skin file does not exist: ${name}`,
-              404
-            );
+            throw new LoadError(`Not Found: Custom skin file does not exist: ${name}`, 404);
           }
           throw err;
         }
@@ -365,8 +320,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
         // 4. Respond with the read data
         return {
           content: buf,
-          contentType:
-            mime.getType(extname(name)) || "application/octet-stream",
+          contentType: mime.getType(extname(name)) || "application/octet-stream",
         };
       }
       // #endregion
@@ -517,8 +471,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
             throw error;
           }
           await writeFile(cfgPath, cfg);
-          const contentType =
-            response.headers["content-type"] || "application/octet-stream";
+          const contentType = response.headers["content-type"] || "application/octet-stream";
           return {
             content: response.rawBody,
             contentType,
@@ -553,8 +506,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
           response.statusCode
         );
       }
-      const contentType =
-        response.headers["content-type"] || "application/octet-stream";
+      const contentType = response.headers["content-type"] || "application/octet-stream";
       return {
         content: response.rawBody,
         contentType,
@@ -564,9 +516,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
     case "localmusic": {
       // #region orpheus://localmusic/pic
       if (parsedUrl.pathname === "/pic") {
-        const path = normalizePath(
-          decodeURIComponent(parsedUrl.search.substring(1))
-        ); // remove leading '?'
+        const path = normalizePath(decodeURIComponent(parsedUrl.search.substring(1))); // remove leading '?'
         try {
           const taggedFile = await MusicFile.load(path);
           const pictures = taggedFile.pictures;
@@ -591,9 +541,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
 
       // #region orpheus://localmusic/lyric
       if (parsedUrl.pathname === "/lyric") {
-        const path = normalizePath(
-          decodeURIComponent(parsedUrl.search.substring(1))
-        ); // remove leading '?'
+        const path = normalizePath(decodeURIComponent(parsedUrl.search.substring(1))); // remove leading '?'
         try {
           const taggedFile = await MusicFile.load(path);
           const lyrics = taggedFile.lyrics;
@@ -608,10 +556,7 @@ export async function loadFromOrpheusUrl(url: string): Promise<SimpleResponse> {
         }
         try {
           // No embedded lyrics: try the .lrc file sitting next to the music file
-          const lrcPath = join(
-            dirname(path),
-            basename(path, extname(path)) + ".lrc"
-          );
+          const lrcPath = join(dirname(path), basename(path, extname(path)) + ".lrc");
           const lrcContent = await readFile(lrcPath, "utf8");
           return {
             content: lrcContent,

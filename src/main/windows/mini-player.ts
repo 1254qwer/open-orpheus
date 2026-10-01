@@ -7,13 +7,7 @@ import psd from "@webtoon/psd";
 import { DOMParser, Element } from "@xmldom/xmldom";
 import { dragWindow } from "@open-orpheus/window";
 
-import {
-  guiUrl,
-  mainWindow,
-  ManagedWindow,
-  OnDemandWindow,
-  switchWindowPolicy,
-} from "../window";
+import { guiUrl, mainWindow, ManagedWindow, OnDemandWindow, switchWindowPolicy } from "../window";
 import { registerIpcHandlers } from "../../bridge/register";
 import { MiniPlayerContract } from "../../bridge/contracts/mini-player-api";
 import type { BtnImages, BtnState } from "../../../types/dui";
@@ -146,30 +140,24 @@ packManager.on("skin2packloaded", async (event) => {
     listPlayingBgColor,
     listScrollBarBgColor,
   ] = await Promise.all(
-    [
-      bg,
-      listBg,
-      listItemBg,
-      listHoverBg,
-      listSelectedBg,
-      listPlayingBg,
-      listScrollBarBg,
-    ].map(async (buf) => {
-      let img: photon.PhotonImage;
-      if (buf.subarray(0, 4).toString("ascii") === "8BPS") {
-        // It's a PSD, convert it (Netease is so freaking stupid)
-        const p = psd.parse(buf.buffer as ArrayBuffer);
-        const data = await p.composite();
-        img = new photon.PhotonImage(
-          new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
-          p.width,
-          p.height
-        );
-      } else {
-        img = photon.PhotonImage.new_from_byteslice(buf);
+    [bg, listBg, listItemBg, listHoverBg, listSelectedBg, listPlayingBg, listScrollBarBg].map(
+      async (buf) => {
+        let img: photon.PhotonImage;
+        if (buf.subarray(0, 4).toString("ascii") === "8BPS") {
+          // It's a PSD, convert it (Netease is so freaking stupid)
+          const p = psd.parse(buf.buffer as ArrayBuffer);
+          const data = await p.composite();
+          img = new photon.PhotonImage(
+            new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+            p.width,
+            p.height
+          );
+        } else {
+          img = photon.PhotonImage.new_from_byteslice(buf);
+        }
+        return extractColor(img);
       }
-      return extractColor(img);
-    })
+    )
   );
 
   const style: Partial<MiniPlayerStyle> = {};
@@ -307,9 +295,7 @@ packManager.on("skin2packloaded", async (event) => {
     if (el.getAttribute("name") === "play_list") {
       listStyle.color = argbToCss(el.getAttribute("itemtextcolor")!);
       listStyle.hoverColor = argbToCss(el.getAttribute("itemhottextcolor")!);
-      listStyle.selectedColor = argbToCss(
-        el.getAttribute("itemselectedtextcolor")!
-      );
+      listStyle.selectedColor = argbToCss(el.getAttribute("itemselectedtextcolor")!);
       break;
     }
   }
@@ -341,8 +327,7 @@ packManager.on("skin2packloaded", async (event) => {
         listStyle.radioIcon = extractBtnImagesFromElement(btn) ?? undefined;
         break;
       case "dj_highlight":
-        listStyle.radioHoverIcon =
-          extractBtnImagesFromElement(btn) ?? undefined;
+        listStyle.radioHoverIcon = extractBtnImagesFromElement(btn) ?? undefined;
         break;
       default:
         btnsFound--;
@@ -390,10 +375,7 @@ export function updatePlayState(playing: boolean) {
   sendToMiniPlayer("playStateUpdate", playState);
 }
 
-export function updateListData(
-  items: MiniPlayerListElement[],
-  cp: string | null
-) {
+export function updateListData(items: MiniPlayerListElement[], cp: string | null) {
   listItems = items;
   currentPlay = cp;
   sendToMiniPlayer("listUpdate", { items, currentPlay });
@@ -445,7 +427,7 @@ const miniPlayerWindowOptions = {
   title: "Open Orpheus Mini Player",
   webPreferences: {
     partition: "open-orpheus",
-    preload: join(import.meta.dirname, "mini-player.js"),
+    preload: join(import.meta.dirname, "mini-player.cjs"),
   },
 } satisfies BrowserWindowConstructorOptions;
 
@@ -492,17 +474,13 @@ class MiniPlayerOnDemandWindow extends OnDemandWindow {
   }
 
   createWindow(): BrowserWindow {
-    return setupMiniPlayerWindow(
-      this.createBrowserWindow(miniPlayerWindowOptions)
-    );
+    return setupMiniPlayerWindow(this.createBrowserWindow(miniPlayerWindowOptions));
   }
 }
 
 /** `"on-demand"` destroys the window when hidden; anything else keeps it. */
 function createWindowForLifecycle(value: unknown): ManagedWindow {
-  return value === "on-demand"
-    ? new MiniPlayerOnDemandWindow()
-    : new MiniPlayerWindow();
+  return value === "on-demand" ? new MiniPlayerOnDemandWindow() : new MiniPlayerWindow();
 }
 
 let lifecycleSwitchRegistered = false;
@@ -519,9 +497,7 @@ function registerLifecycleSwitch() {
 
   settingsEvents.on("change", (e) => {
     if (e.data.key !== "window.lifecycle" || !window) return;
-    window = switchWindowPolicy(window, () =>
-      createWindowForLifecycle(e.data.value)
-    );
+    window = switchWindowPolicy(window, () => createWindowForLifecycle(e.data.value));
   });
 }
 

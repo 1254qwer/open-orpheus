@@ -26,8 +26,7 @@ import { log as logDir } from "./folders";
  * also sorts lexicographically in chronological order.
  */
 function formatLogTimestamp(date: Date): string {
-  const pad = (value: number, width: number) =>
-    value.toString().padStart(width, "0");
+  const pad = (value: number, width: number) => value.toString().padStart(width, "0");
   return (
     `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1, 2)}-${pad(date.getUTCDate(), 2)}` +
     `_${pad(date.getUTCHours(), 2)}-${pad(date.getUTCMinutes(), 2)}-${pad(date.getUTCSeconds(), 2)}` +
@@ -46,9 +45,7 @@ function formatLogTimestamp(date: Date): string {
  * being treated as unknown (oldest).
  */
 function parseLogTimestamp(value: string): Date | null {
-  const match = value.match(
-    /^(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})-(\d{3})(?:-\d+)?$/
-  );
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})-(\d{3})(?:-\d+)?$/);
   if (!match) return null;
   const [, year, month, day, hours, minutes, seconds, ms] = match.map(Number);
   return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, ms));
@@ -154,9 +151,7 @@ async function finishRoll(rollingName: string): Promise<void> {
 function pruneRotatedLogs(): void {
   // Remove temporary outputs left behind by an interrupted compression; they
   // are never valid archives and must not occupy retention capacity.
-  for (const name of readdirSync(logDir).filter((v) =>
-    v.endsWith(".ndjson.gz.tmp")
-  )) {
+  for (const name of readdirSync(logDir).filter((v) => v.endsWith(".ndjson.gz.tmp"))) {
     unlinkSync(resolve(logDir, name));
   }
 
@@ -168,15 +163,12 @@ function pruneRotatedLogs(): void {
   // one seat so the collision cannot evict a different valid archive.
   const targets = new Set(all.filter((v) => v.endsWith(".ndjson.gz")));
   const entries = all.filter(
-    (v) =>
-      !v.endsWith(".ndjson.gz.rolling") ||
-      !targets.has(v.replace(/\.rolling$/, ""))
+    (v) => !v.endsWith(".ndjson.gz.rolling") || !targets.has(v.replace(/\.rolling$/, ""))
   );
   if (entries.length > 5) {
     const timestamp = (name: string) =>
-      parseLogTimestamp(
-        name.replace(/\.rolling$/, "").replace(/\.ndjson\.gz$/, "")
-      )?.getTime() ?? Number.NEGATIVE_INFINITY;
+      parseLogTimestamp(name.replace(/\.rolling$/, "").replace(/\.ndjson\.gz$/, ""))?.getTime() ??
+      Number.NEGATIVE_INFINITY;
     entries.sort((a, b) => timestamp(a) - timestamp(b));
     for (const stale of entries.slice(0, entries.length - 5)) {
       unlinkSync(resolve(logDir, stale));
@@ -218,9 +210,7 @@ if (existsSync(latestLog)) {
  * runs afterwards and can clean up failed staging files via the seat count.
  */
 async function finishPendingRolls(): Promise<void> {
-  for (const name of readdirSync(logDir).filter((v) =>
-    v.endsWith(".ndjson.gz.rolling")
-  )) {
+  for (const name of readdirSync(logDir).filter((v) => v.endsWith(".ndjson.gz.rolling"))) {
     try {
       await finishRoll(name);
     } catch (err) {
@@ -283,19 +273,16 @@ export function flushLogs(): void {
   }
 }
 
-ipcMain.on(
-  "logger.log",
-  (event, level: string, bindings, ...args: Parameters<LogFn>) => {
-    // The preload facade forwards the bindings captured by `child()` (e.g. the
-    // `{ name }` injected by the compile-time plugin), so we log through a pino
-    // child logger carrying those fields.
-    const target =
-      bindings && typeof bindings === "object"
-        ? logger.child(bindings as Record<string, unknown>)
-        : logger;
-    (target as unknown as Record<string, LogFn>)[level]?.(...args);
-  }
-);
+ipcMain.on("logger.log", (event, level: string, bindings, ...args: Parameters<LogFn>) => {
+  // The preload facade forwards the bindings captured by `child()` (e.g. the
+  // `{ name }` injected by the compile-time plugin), so we log through a pino
+  // child logger carrying those fields.
+  const target =
+    bindings && typeof bindings === "object"
+      ? logger.child(bindings as Record<string, unknown>)
+      : logger;
+  (target as unknown as Record<string, LogFn>)[level]?.(...args);
+});
 
 export default logger;
 

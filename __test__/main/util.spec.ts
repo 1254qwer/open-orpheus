@@ -43,13 +43,9 @@ describe.runIf(onPosix)("normalizePath", () => {
 
 describe.runIf(onPosix)("sanitizeRelativePath", () => {
   it("resolves paths inside the base directory", () => {
-    expect(sanitizeRelativePath("/base", "sub/file.txt")).toBe(
-      "/base/sub/file.txt"
-    );
+    expect(sanitizeRelativePath("/base", "sub/file.txt")).toBe("/base/sub/file.txt");
     expect(sanitizeRelativePath("/base", "a/../b.txt")).toBe("/base/b.txt");
-    expect(sanitizeRelativePath("/base", "sub\\file.txt")).toBe(
-      "/base/sub/file.txt"
-    );
+    expect(sanitizeRelativePath("/base", "sub\\file.txt")).toBe("/base/sub/file.txt");
   });
 
   it("resolves the base directory itself", () => {
@@ -70,12 +66,8 @@ describe.runIf(onPosix)("sanitizeRelativePath", () => {
 
 describe("isFileNotFound", () => {
   it("detects ENOENT errors", () => {
-    expect(
-      isFileNotFound(Object.assign(new Error("nope"), { code: "ENOENT" }))
-    ).toBe(true);
-    expect(
-      isFileNotFound(Object.assign(new Error("denied"), { code: "EACCES" }))
-    ).toBe(false);
+    expect(isFileNotFound(Object.assign(new Error("nope"), { code: "ENOENT" }))).toBe(true);
+    expect(isFileNotFound(Object.assign(new Error("denied"), { code: "EACCES" }))).toBe(false);
     expect(isFileNotFound(new Error("nope"))).toBe(false);
     expect(isFileNotFound("nope")).toBe(false);
     expect(isFileNotFound(null)).toBe(false);
@@ -135,9 +127,7 @@ describe("selectBestMusicPic", () => {
 
   it("prefers the front cover", () => {
     const front = pic("Cover Art (Front)");
-    expect(
-      selectBestMusicPic([pic("Cover Art (Back)"), front, pic("Other")])
-    ).toBe(front);
+    expect(selectBestMusicPic([pic("Cover Art (Back)"), front, pic("Other")])).toBe(front);
   });
 
   it("falls back to the first picture", () => {

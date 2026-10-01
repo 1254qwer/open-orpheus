@@ -7,9 +7,7 @@ import { resolvePrebuiltAppDir } from "../packaging/common/prebuilt.ts";
 const projectRoot = resolve(import.meta.dirname, "..");
 const flags = parseFlags(process.argv.slice(2));
 
-const { rpm: rpmOptions } = await import(
-  new URL("../packaging/options.ts", import.meta.url).href
-);
+const { rpm: rpmOptions } = await import(new URL("../packaging/options.ts", import.meta.url).href);
 const prebuilt = flags.prebuilt
   ? await resolvePrebuiltAppDir(projectRoot, rpmOptions.name, flags.arch)
   : undefined;

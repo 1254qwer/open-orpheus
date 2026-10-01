@@ -121,8 +121,11 @@ registerCallHandler<[NetworkFetchRequest], [NetworkFetchResponse]>(
         {
           code: 28,
           error:
-            (error as Error)?.message ||
-            (error ? String(error) : "Unknown error"),
+            typeof error === "string"
+              ? error
+              : error instanceof Error
+                ? error.message
+                : (JSON.stringify(error) ?? "Unknown error"),
           status: 0,
           blob: "",
           headers: {},
@@ -159,12 +162,7 @@ registerCallHandler<[AegisInitConfig], [{ errorCode: number }]>(
   (event, config) => [
     aegis.init(config ?? {}, {
       onEncryptStateChange: (state: AegisEncryptState, reason: string) => {
-        event.sender.send(
-          "channel.call",
-          "network.onEncryptStateChange",
-          state,
-          reason
-        );
+        event.sender.send("channel.call", "network.onEncryptStateChange", state, reason);
       },
       onRequestPublicKey: (request) => {
         event.sender.send(

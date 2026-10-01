@@ -25,25 +25,20 @@ export default class MusicDesktopWindow extends ManagedWindow {
       transparent: true,
       show: false,
       webPreferences: {
-        preload: join(import.meta.dirname, "preload.js"),
+        preload: join(import.meta.dirname, "preload.cjs"),
       },
     });
     if (isAppUrl(url)) {
       void wnd.loadURL(url);
     } else {
-      LOGGER.warn(
-        { url },
-        `refused to load a non-application URL into the music desktop window`
-      );
+      LOGGER.warn({ url }, `refused to load a non-application URL into the music desktop window`);
     }
     this.setWindowInputRegion([]);
 
     if (
-      [
-        DesktopEnvironment.X11,
-        DesktopEnvironment.Windows,
-        DesktopEnvironment.Darwin,
-      ].includes(getDesktopEnvironment())
+      [DesktopEnvironment.X11, DesktopEnvironment.Windows, DesktopEnvironment.Darwin].includes(
+        getDesktopEnvironment()
+      )
     ) {
       const setBounds = () => wnd.setBounds(screen.getPrimaryDisplay().bounds);
       setBounds();

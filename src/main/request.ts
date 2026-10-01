@@ -33,9 +33,7 @@ export function getProxyURL(proto: string, server: ProxyServer): URL {
   return url;
 }
 
-export async function getProxyAgent(
-  config?: ProxyConfiguration
-): Promise<Agents | undefined> {
+export async function getProxyAgent(config?: ProxyConfiguration): Promise<Agents | undefined> {
   if (!config) return undefined;
   switch (config.Type) {
     case "none":
@@ -51,13 +49,9 @@ export async function getProxyAgent(
     }
     case "http": {
       const HttpProxyAgent = (await import("http-proxy-agent")).HttpProxyAgent;
-      const HttpsProxyAgent = (await import("https-proxy-agent"))
-        .HttpsProxyAgent;
+      const HttpsProxyAgent = (await import("https-proxy-agent")).HttpsProxyAgent;
       const cfg = config[config.Type]!;
-      const httpAgent = new HttpProxyAgent(
-        getProxyURL(config.Type, cfg),
-        defaultHttpAgentOptions
-      );
+      const httpAgent = new HttpProxyAgent(getProxyURL(config.Type, cfg), defaultHttpAgentOptions);
       const httpsAgent = new HttpsProxyAgent(
         getProxyURL(config.Type, cfg),
         defaultHttpAgentOptions
@@ -70,13 +64,9 @@ export async function getProxyAgent(
     }
     case "socks4":
     case "socks5": {
-      const SocksProxyAgent = (await import("socks-proxy-agent"))
-        .SocksProxyAgent;
+      const SocksProxyAgent = (await import("socks-proxy-agent")).SocksProxyAgent;
       const cfg = config[config.Type]!;
-      const agent = new SocksProxyAgent(
-        getProxyURL(config.Type, cfg),
-        defaultHttpAgentOptions
-      );
+      const agent = new SocksProxyAgent(getProxyURL(config.Type, cfg), defaultHttpAgentOptions);
       return {
         http: agent,
         https: agent,
@@ -101,10 +91,7 @@ export let client: Got = got.extend({
     },
   },
   https: {
-    certificateAuthority: [
-      ...tls.getCACertificates("system"),
-      ...tls.rootCertificates,
-    ],
+    certificateAuthority: [...tls.getCACertificates("system"), ...tls.rootCertificates],
   },
 });
 
@@ -115,21 +102,17 @@ export function setProxy(agents: Agents | undefined) {
 }
 
 export function setupRequestInterceptors() {
-  session.defaultSession.webRequest.onBeforeSendHeaders(
-    async (details, callback) => {
-      const url = new URL(details.url);
+  session.defaultSession.webRequest.onBeforeSendHeaders(async (details, callback) => {
+    const url = new URL(details.url);
 
-      // Generic Cookie Injection
-      if (url.protocol === "https:" && url.hostname.endsWith("music.163.com")) {
-        const cookies = stringifyCookie(
-          await getCookies("https://" + url.hostname)
-        );
-        details.requestHeaders["Cookie"] = cookies;
-      }
-
-      callback({ requestHeaders: details.requestHeaders });
+    // Generic Cookie Injection
+    if (url.protocol === "https:" && url.hostname.endsWith("music.163.com")) {
+      const cookies = stringifyCookie(await getCookies("https://" + url.hostname));
+      details.requestHeaders["Cookie"] = cookies;
     }
-  );
+
+    callback({ requestHeaders: details.requestHeaders });
+  });
 
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
     const url = details.url;
@@ -152,34 +135,26 @@ export function setupRequestInterceptors() {
     // only iframe
     if (details.frame !== null && details.frame?.top !== details.frame) {
       const host = new URL(details.url).hostname;
-      if (
-        host.endsWith("music.163.com") ||
-        host.endsWith("qq.com") ||
-        host.endsWith("weibo.com")
-      ) {
+      if (host.endsWith("music.163.com") || host.endsWith("qq.com") || host.endsWith("weibo.com")) {
         const cookieKey = Object.keys(details.responseHeaders).find(
           (k) => k.toLowerCase() === "set-cookie"
         );
         if (cookieKey && details.responseHeaders[cookieKey]) {
-          details.responseHeaders[cookieKey] = (
-            details.responseHeaders[cookieKey] as string[]
-          ).map((c) => {
-            let patched = c;
-            if (!patched.toLowerCase().includes("samesite"))
-              patched += "; SameSite=None";
-            if (!patched.toLowerCase().includes("secure"))
-              patched += "; Secure";
-            return patched;
-          });
+          details.responseHeaders[cookieKey] = (details.responseHeaders[cookieKey] as string[]).map(
+            (c) => {
+              let patched = c;
+              if (!patched.toLowerCase().includes("samesite")) patched += "; SameSite=None";
+              if (!patched.toLowerCase().includes("secure")) patched += "; Secure";
+              return patched;
+            }
+          );
         }
       }
     }
 
     // Custom skin
     if (details.url.startsWith("https://music.163.com/api/nos/token/alloc")) {
-      details.responseHeaders["Access-Control-Allow-Origin"] = [
-        "orpheus://orpheus",
-      ];
+      details.responseHeaders["Access-Control-Allow-Origin"] = ["orpheus://orpheus"];
       details.responseHeaders["Access-Control-Allow-Credentials"] = ["true"];
     }
 

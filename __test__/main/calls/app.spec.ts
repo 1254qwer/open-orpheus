@@ -87,11 +87,7 @@ async function freshModules() {
 }
 
 /** Dispatch a command and return the tuple spread onto the callback. */
-async function call(
-  dispatcher: CallDispatcher,
-  command: string,
-  ...args: unknown[]
-) {
+async function call(dispatcher: CallDispatcher, command: string, ...args: unknown[]) {
   const callback = vi.fn();
   await dispatcher.dispatch(command, callback, { sender: "test" }, ...args);
   return callback.mock.calls[0] as unknown[];
@@ -143,13 +139,7 @@ describe("app.getAppStartCommand", () => {
 
   it("parses a --moverun command", async () => {
     const { dispatcher } = await freshModules();
-    stubProcessArgv([
-      "electron",
-      ".",
-      "--moverun",
-      "/music/old.mp3",
-      "/music/new.mp3",
-    ]);
+    stubProcessArgv(["electron", ".", "--moverun", "/music/old.mp3", "/music/new.mp3"]);
 
     const [command] = await call(dispatcher!, "app.getAppStartCommand");
 
@@ -191,13 +181,7 @@ describe("app.getAppStartCommand", () => {
 
   it("prefers --moverun over a local file in the same argv", async () => {
     const { dispatcher } = await freshModules();
-    stubProcessArgv([
-      "electron",
-      ".",
-      "--moverun",
-      "/music/old.mp3",
-      "/music/new.mp3",
-    ]);
+    stubProcessArgv(["electron", ".", "--moverun", "/music/old.mp3", "/music/new.mp3"]);
     // Music files are not filtered out here; the ordering inside the predicate
     // is what decides.
     hoisted.isMusicFile.mockReturnValue(true);
@@ -237,9 +221,7 @@ describe("app.getDefaultMusicPlayPath", () => {
 
     const [path] = await call(dispatcher!, "app.getDefaultMusicPlayPath");
 
-    expect(hoisted.isMusicFile).toHaveBeenCalledWith(
-      normalize("some/song.mp3")
-    );
+    expect(hoisted.isMusicFile).toHaveBeenCalledWith(normalize("some/song.mp3"));
     expect(path).toBe(normalize("some/song.mp3"));
   });
 
