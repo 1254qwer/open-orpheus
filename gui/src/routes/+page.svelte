@@ -109,13 +109,10 @@
         <Dialog.Title class="text-xl">发现新版本 Open Orpheus</Dialog.Title>
         <Dialog.Description>
           <p>
-            Open Orpheus 已更新到 <b>{updateInfo.version}</b
-            >。建议您更新以获得最佳体验。
+            Open Orpheus 已更新到 <b>{updateInfo.version}</b>。建议您更新以获得最佳体验。
           </p>
           <p class="mt-4 text-right">
-            <Button variant="link" href={updateInfo.url} target="_blank"
-              >查看详细信息</Button
-            >
+            <Button variant="link" href={updateInfo.url} target="_blank">查看详细信息</Button>
           </p>
         </Dialog.Description>
       {/if}
@@ -124,10 +121,7 @@
 </Dialog.Root>
 
 <Sidebar.Provider>
-  <Sidebar.Root
-    collapsible="none"
-    class="h-screen min-w-64 border-r-2 border-gray-200/50"
-  >
+  <Sidebar.Root collapsible="none" class="h-screen min-w-64 border-r-2 border-gray-200/50">
     <Sidebar.Header>
       <Sidebar.Menu>
         <Sidebar.MenuItem>
@@ -138,11 +132,7 @@
                   {...props}
                   class="grid h-auto cursor-pointer grid-cols-[auto_1fr] grid-rows-[auto_auto] gap-0"
                 >
-                  <img
-                    src={Logo}
-                    alt="Logo"
-                    class="row-span-2 mr-2 h-10 w-10 self-center"
-                  />
+                  <img src={Logo} alt="Logo" class="row-span-2 mr-2 h-10 w-10 self-center" />
                   <h1 class="text-xl font-bold">Open Orpheus</h1>
                   <p class="text-xs opacity-75">v{__APP_VERSION__}</p>
                 </Sidebar.MenuButton>

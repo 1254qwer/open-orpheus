@@ -2,14 +2,7 @@ import { isAbsolute } from "node:path";
 import os from "node:os";
 import { statfs } from "node:fs/promises";
 
-import {
-  app,
-  BrowserWindow,
-  Notification,
-  powerSaveBlocker,
-  screen,
-  shell,
-} from "electron";
+import { app, BrowserWindow, Notification, powerSaveBlocker, screen, shell } from "electron";
 
 import { getSystemFonts } from "@open-orpheus/ui";
 
@@ -24,16 +17,11 @@ import {
   setScheduledShutdown,
 } from "../shutdown";
 
-registerCallHandler<[string], [boolean]>(
-  "os.isFileExist",
-  async (event, path) => {
-    const filePath = isAbsolute(path)
-      ? normalizePath(path)
-      : sanitizeRelativePath("data", path);
-    if (filePath === false) return [false];
-    return [await fileExists(filePath)];
-  }
-);
+registerCallHandler<[string], [boolean]>("os.isFileExist", async (event, path) => {
+  const filePath = isAbsolute(path) ? normalizePath(path) : sanitizeRelativePath("data", path);
+  if (filePath === false) return [false];
+  return [await fileExists(filePath)];
+});
 
 registerCallHandler<[], [string]>("os.getDeviceId", () => {
   return [getDeviceId()];
@@ -100,11 +88,11 @@ registerCallHandler<[], [string, string[]]>("os.querySystemFonts", () => {
 });
 
 registerCallHandler<[string], void>("os.navigateExternal", (event, url) => {
-  shell.openExternal(url);
+  void shell.openExternal(url);
 });
 
 registerCallHandler<[string], void>("os.shellOpen", (event, path) => {
-  shell.openPath(normalizePath(path));
+  void shell.openPath(normalizePath(path));
 });
 
 registerCallHandler<[string], void>("os.shellExplor", (event, path) => {
@@ -136,18 +124,15 @@ registerCallHandler<
     },
   ],
   void
->(
-  "os.setPowerRequests",
-  (event, { enable, preventSystemSleep, preventDisplaySleep }) => {
-    if (enable) {
-      setPowerRequest("prevent-app-suspension", preventSystemSleep);
-      setPowerRequest("prevent-display-sleep", preventDisplaySleep);
-    } else {
-      setPowerRequest("prevent-app-suspension", false);
-      setPowerRequest("prevent-display-sleep", false);
-    }
+>("os.setPowerRequests", (event, { enable, preventSystemSleep, preventDisplaySleep }) => {
+  if (enable) {
+    setPowerRequest("prevent-app-suspension", preventSystemSleep);
+    setPowerRequest("prevent-display-sleep", preventDisplaySleep);
+  } else {
+    setPowerRequest("prevent-app-suspension", false);
+    setPowerRequest("prevent-display-sleep", false);
   }
-);
+});
 
 // The auto-exit countdown's last act is a power-off (Windows) that the system can
 // still refuse at the deadline, and the user has to learn that the machine is
@@ -165,18 +150,14 @@ async function disableScheduledShutdown() {
   // nothing to warn the user about on platforms without the feature.
   if (!hasManagedScheduledShutdown()) return;
   const result = await setScheduledShutdown();
-  if (
-    result !== ScheduleShutdownStatus.Ok &&
-    result !== ScheduleShutdownStatus.AlreadySet
-  ) {
+  if (result !== ScheduleShutdownStatus.Ok && result !== ScheduleShutdownStatus.AlreadySet) {
     let body: string;
     switch (result) {
       case ScheduleShutdownStatus.ManagedExternally:
         body = "定时关机已被其他应用设置，如有需要，请手动取消定时关机";
         break;
       default:
-        body =
-          "无法取消定时关机，可能是其他应用重新设置了定时关机，请手动取消定时关机";
+        body = "无法取消定时关机，可能是其他应用重新设置了定时关机，请手动取消定时关机";
         break;
     }
     new Notification({
@@ -210,16 +191,12 @@ async function applyExitWindowSystem(seconds: number, shouldShutdown: boolean) {
   const targetTimestamp = Date.now() + ms;
   if (shouldShutdown) {
     const result = await setScheduledShutdown(new Date(targetTimestamp));
-    if (
-      result !== ScheduleShutdownStatus.Ok &&
-      result !== ScheduleShutdownStatus.AlreadySet
-    ) {
+    if (result !== ScheduleShutdownStatus.Ok && result !== ScheduleShutdownStatus.AlreadySet) {
       // Failed to schedule a shutdown
       let body: string;
       switch (result) {
         case ScheduleShutdownStatus.ManagedExternally:
-          body =
-            "定时关机已被其他应用设置，Open Orpheus 将不会修改定时关机设置";
+          body = "定时关机已被其他应用设置，Open Orpheus 将不会修改定时关机设置";
           break;
         default:
           body = "无法设置计划关机，定时关机将不会生效";
@@ -274,15 +251,12 @@ registerCallHandler<[], [number, number]>("os.exitWindowSystemLeftTime", () => {
   ];
 });
 
-registerCallHandler<[string], [string]>(
-  "os.getDiskSpace",
-  async (event, path) => {
-    const statResult = await statfs(path);
-    return [
-      JSON.stringify({
-        total: statResult.blocks * statResult.bsize,
-        free: statResult.bfree * statResult.bsize,
-      }),
-    ];
-  }
-);
+registerCallHandler<[string], [string]>("os.getDiskSpace", async (event, path) => {
+  const statResult = await statfs(path);
+  return [
+    JSON.stringify({
+      total: statResult.blocks * statResult.bsize,
+      free: statResult.bfree * statResult.bsize,
+    }),
+  ];
+});

@@ -15,9 +15,7 @@ const PROPERTIES_INTERFACE = "org.freedesktop.DBus.Properties";
  * The MPRIS surface can only be exercised against a session bus, so these tests
  * skip on machines that have none (they are not part of the main vitest run).
  */
-const serial = process.env.DBUS_SESSION_BUS_ADDRESS
-  ? test.serial
-  : test.serial.skip;
+const serial = process.env.DBUS_SESSION_BUS_ADDRESS ? test.serial : test.serial.skip;
 
 let sessionCounter = 0;
 const sessions: MediaSession[] = [];
@@ -37,11 +35,7 @@ test.after.always(() => {
 });
 
 /** Invoke a player method and resolve with `gdbus`'s output. */
-async function callPlayer(
-  destination: string,
-  method: string,
-  ...args: string[]
-): Promise<string> {
+async function callPlayer(destination: string, method: string, ...args: string[]): Promise<string> {
   const { stdout } = await execFileAsync("gdbus", [
     "call",
     "--session",
@@ -57,10 +51,7 @@ async function callPlayer(
 }
 
 /** Read a player property, unwrapping `gdbus`'s `<value>` / `'value'` syntax. */
-async function getProperty(
-  destination: string,
-  property: string
-): Promise<string> {
+async function getProperty(destination: string, property: string): Promise<string> {
   const { stdout } = await execFileAsync("gdbus", [
     "call",
     "--session",
@@ -123,36 +114,33 @@ serial("lets a handler update properties without deadlocking", async (t) => {
   t.is(await getProperty(destination, "PlaybackStatus"), "Playing");
 });
 
-serial(
-  "lets a handler write back the volume a D-Bus property set reports",
-  async (t) => {
-    const { session, destination } = newSession();
+serial("lets a handler write back the volume a D-Bus property set reports", async (t) => {
+  const { session, destination } = newSession();
 
-    session.setEventHandler(async (_err, event) => {
-      if (event.type !== "SetVolume") return;
-      // The property set that delivered this event holds the interface's read
-      // lock while it waits here, so writing the property back must not need
-      // the write lock.
-      await session.setVolume(event.volume);
-    });
+  session.setEventHandler(async (_err, event) => {
+    if (event.type !== "SetVolume") return;
+    // The property set that delivered this event holds the interface's read
+    // lock while it waits here, so writing the property back must not need
+    // the write lock.
+    await session.setVolume(event.volume);
+  });
 
-    await execFileAsync("gdbus", [
-      "call",
-      "--session",
-      "--dest",
-      destination,
-      "--object-path",
-      OBJECT_PATH,
-      "--method",
-      `${PROPERTIES_INTERFACE}.Set`,
-      PLAYER_INTERFACE,
-      "Volume",
-      "<0.5>",
-    ]);
+  await execFileAsync("gdbus", [
+    "call",
+    "--session",
+    "--dest",
+    destination,
+    "--object-path",
+    OBJECT_PATH,
+    "--method",
+    `${PROPERTIES_INTERFACE}.Set`,
+    PLAYER_INTERFACE,
+    "Volume",
+    "<0.5>",
+  ]);
 
-    t.is(await getProperty(destination, "Volume"), "0.5");
-  }
-);
+  t.is(await getProperty(destination, "Volume"), "0.5");
+});
 
 serial("propagates a rejected handler back to the caller", async (t) => {
   const { session, destination } = newSession();

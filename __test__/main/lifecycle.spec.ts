@@ -75,7 +75,7 @@ describe("setLifecycleState", () => {
     events.on("started", onStarted);
 
     const emitted = new Promise<void>((resolve) => {
-      events.once("started").then(() => resolve());
+      void events.once("started").then(() => resolve());
     });
 
     setLifecycleState(LifecycleState.Started);
@@ -89,7 +89,7 @@ describe("setLifecycleState", () => {
     events.on("quitting", onQuitting);
 
     const emitted = new Promise<void>((resolve) => {
-      events.once("quitting").then(() => resolve());
+      void events.once("quitting").then(() => resolve());
     });
 
     setLifecycleState(LifecycleState.Quitting);
@@ -125,9 +125,7 @@ let prependListenerSpy: MockInstance;
 let signalHandlers: Map<string, AppEventHandler>;
 
 async function freshLifecycle(
-  options?: Parameters<
-    typeof import("../../src/main/lifecycle").installLifecycle
-  >[0]
+  options?: Parameters<typeof import("../../src/main/lifecycle").installLifecycle>[0]
 ) {
   vi.resetModules();
   signalHandlers.clear();
@@ -563,9 +561,7 @@ describe("signals", () => {
   it("falls back to process.exit before the app is ready", async () => {
     await freshLifecycle();
     hoisted.app.isReady.mockReturnValue(false);
-    const processExit = vi
-      .spyOn(process, "exit")
-      .mockImplementation((() => undefined) as never);
+    const processExit = vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
 
     try {
       fireSignal("SIGTERM");

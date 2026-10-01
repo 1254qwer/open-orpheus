@@ -67,9 +67,7 @@ describe("initialize", () => {
   it("applies the default value of a known key", async () => {
     initialize();
 
-    await expect(kv.get("tray.clickBehavior")).resolves.toBe(
-      "always-show-menu"
-    );
+    await expect(kv.get("tray.clickBehavior")).resolves.toBe("always-show-menu");
     await expect(kv.get("desktopLyrics.opacity")).resolves.toBe(1);
   });
 
@@ -101,17 +99,21 @@ describe("initialize", () => {
     hoisted.store.get.mockResolvedValueOnce([0.5, "http://proxy", "kept"]);
     initialize();
 
-    await expect(
-      kv.get(["desktopLyrics.opacity", "proxy", "nope.unknown"])
-    ).resolves.toEqual([0.5, "http://proxy", "kept"]);
+    await expect(kv.get(["desktopLyrics.opacity", "proxy", "nope.unknown"])).resolves.toEqual([
+      0.5,
+      "http://proxy",
+      "kept",
+    ]);
   });
 
   it("fills defaults when many keys are read at once", async () => {
     initialize();
 
-    await expect(
-      kv.getMany(["desktopLyrics.opacity", "proxy", "nope.unknown"])
-    ).resolves.toEqual([1, undefined, undefined]);
+    await expect(kv.getMany(["desktopLyrics.opacity", "proxy", "nope.unknown"])).resolves.toEqual([
+      1,
+      undefined,
+      undefined,
+    ]);
   });
 
   it("emits a change event before a set", async () => {
@@ -121,9 +123,7 @@ describe("initialize", () => {
     hoisted.store.hooks.get("before:set")?.({ key: "proxy", value: "x" });
     await flush();
 
-    expect(seen).toEqual([
-      { event: "change", data: { key: "proxy", value: "x" } },
-    ]);
+    expect(seen).toEqual([{ event: "change", data: { key: "proxy", value: "x" } }]);
   });
 
   it("emits one delete event per key", async () => {

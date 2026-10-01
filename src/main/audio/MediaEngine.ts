@@ -55,10 +55,7 @@ export class MediaEngine {
   /** Delete a retired streamer's file without blocking the caller. */
   private destroyInBackground(streamer: OnlineStreamer): void {
     const done = streamer.destroy().catch((e) => {
-      LOGGER.error(
-        { err: toError(e) },
-        `Failed to destroy previous OnlineStreamer`
-      );
+      LOGGER.error({ err: toError(e) }, `Failed to destroy previous OnlineStreamer`);
     });
     this.pendingDestructions.add(done);
     // Drop the reference once it settles, so the set tracks only what is still
@@ -160,10 +157,7 @@ export class MediaEngine {
     const results = await Promise.allSettled(deletions);
     for (const result of results) {
       if (result.status === "rejected") {
-        LOGGER.error(
-          { err: toError(result.reason) },
-          `Failed to destroy OnlineStreamer`
-        );
+        LOGGER.error({ err: toError(result.reason) }, `Failed to destroy OnlineStreamer`);
       }
     }
   }

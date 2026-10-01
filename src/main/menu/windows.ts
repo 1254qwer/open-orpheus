@@ -22,7 +22,7 @@ const menuWindowOptions = {
   focusable: true,
   webPreferences: {
     partition: "open-orpheus",
-    preload: join(import.meta.dirname, "menu.js"),
+    preload: join(import.meta.dirname, "menu.cjs"),
   },
 } satisfies BrowserWindowConstructorOptions;
 
@@ -39,7 +39,7 @@ const overlayWindowOptions = {
   focusable: true,
   webPreferences: {
     partition: "open-orpheus",
-    preload: join(import.meta.dirname, "menu.js"),
+    preload: join(import.meta.dirname, "menu.cjs"),
     additionalArguments: ["--wayland"],
   },
 } satisfies BrowserWindowConstructorOptions;
@@ -93,7 +93,7 @@ const submenuWindowOptions = {
   focusable: true,
   webPreferences: {
     partition: "open-orpheus",
-    preload: join(import.meta.dirname, "menu.js"),
+    preload: join(import.meta.dirname, "menu.cjs"),
     additionalArguments: ["--submenu"],
   },
 } satisfies BrowserWindowConstructorOptions;

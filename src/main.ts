@@ -31,11 +31,7 @@ import packManager, { NO_WEBPACK_ERROR_MESSAGE } from "./main/pack";
 import showPackgeDownloadWindow from "./main/windows/package-download";
 import { mainWindow } from "./main/window";
 import registerAsProtocolClient from "./main/protocol";
-import {
-  parseLocalFile,
-  parseWebCommand,
-  raceArgument,
-} from "./main/arguments";
+import { parseLocalFile, parseWebCommand, raceArgument } from "./main/arguments";
 import { toError } from "./util";
 import { installLifecycle, setStartupTask } from "./main/lifecycle";
 import { checkEnvFlagPresent, isFileNotFound } from "./main/util";
@@ -124,21 +120,17 @@ app.on("ready", async () => {
         "Mozilla/5.0 (Windows NT 10.0; WOW64)"
       );
     }
-    session.defaultSession.setUserAgent(
-      `${userAgent} NeteaseMusicDesktop/${CORE_VERSION}`
-    );
-    session.defaultSession.setDisplayMediaRequestHandler(
-      async (request, callback) => {
-        if (!request.frame) {
-          callback({});
-          return;
-        }
-        callback({
-          video: request.frame,
-          audio: "loopback",
-        });
+    session.defaultSession.setUserAgent(`${userAgent} NeteaseMusicDesktop/${CORE_VERSION}`);
+    session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
+      if (!request.frame) {
+        callback({});
+        return;
       }
-    );
+      callback({
+        video: request.frame,
+        audio: "loopback",
+      });
+    });
 
     const openOrpheusSession = session.fromPartition("open-orpheus");
 
@@ -151,12 +143,9 @@ app.on("ready", async () => {
     // through the download window. It prevents re-offering the window on every
     // launch for the same version (e.g. after the user cancels). `null` means
     // we've never recorded one yet.
-    let offeredWebPackCommit: string | null = await readFile(
-      lastWebpackHashPath,
-      {
-        encoding: "utf-8",
-      }
-    )
+    let offeredWebPackCommit: string | null = await readFile(lastWebpackHashPath, {
+      encoding: "utf-8",
+    })
       .then((content) => content.trim() || null)
       .catch((err) => {
         if (!isFileNotFound(err)) {
@@ -181,23 +170,15 @@ app.on("ready", async () => {
       } else {
         try {
           await packManager.loadWebPack();
-          const webPackCommit = await packManager
-            .getPack<WebPack>("web")
-            .getCommitHash();
+          const webPackCommit = await packManager.getPack<WebPack>("web").getCommitHash();
           // Offer the update when the installed pack doesn't match the commit
           // versions.json expects, but only once per commit — once the user
           // has been offered it (or cancelled), don't nag again.
-          if (
-            webPackCommit !== versions.commit &&
-            offeredWebPackCommit !== versions.commit
-          ) {
+          if (webPackCommit !== versions.commit && offeredWebPackCommit !== versions.commit) {
             downloadReason = PackageDownloadReason.UpdateAvailable;
           }
         } catch (err) {
-          logger.error(
-            { name: "loader", err: toError(err) },
-            "Failed to load web pack."
-          );
+          logger.error({ name: "loader", err: toError(err) }, "Failed to load web pack.");
           downloadReason =
             err instanceof Error && err.message === NO_WEBPACK_ERROR_MESSAGE
               ? PackageDownloadReason.NotFound
@@ -218,10 +199,7 @@ app.on("ready", async () => {
         cancelled = true;
         if (e !== "CANCEL") {
           failed = true;
-          logger.error(
-            { name: "loader", err: toError(e) },
-            "Failed to download web pack."
-          );
+          logger.error({ name: "loader", err: toError(e) }, "Failed to download web pack.");
         }
       }
 
@@ -287,11 +265,8 @@ app.on("ready", async () => {
           if (frame.isDestroyed()) return;
           const url = new URL(frame.url);
           // We want only secure, trusted pages
-          if (
-            url.protocol === "https:" ||
-            url.hostname.endsWith("music.163.com")
-          )
-            frame.executeJavaScript("window.channel = window.channel ?? {};");
+          if (url.protocol === "https:" || url.hostname.endsWith("music.163.com"))
+            void frame.executeJavaScript("window.channel = window.channel ?? {};");
         });
       });
     });
@@ -346,10 +321,7 @@ app.on("ready", async () => {
           }
         } catch (err) {
           if (isFileNotFound(err)) return;
-          logger.error(
-            { name: "loader", err: toError(err) },
-            `Failed to cleanup download temp`
-          );
+          logger.error({ name: "loader", err: toError(err) }, `Failed to cleanup download temp`);
         }
       })(),
       import("./main/afp"),
@@ -405,11 +377,7 @@ app.on("ready", async () => {
           const agents = await m.getProxyAgent(cfg);
           m.setProxy(agents);
         } catch (err) {
-          logger.warn(
-            { name: "proxy" },
-            "Failed to load proxy configuration: %s",
-            err
-          );
+          logger.warn({ name: "proxy" }, "Failed to load proxy configuration: %s", err);
         }
       }),
       prepareDeviceId().then(async () => {
@@ -435,7 +403,7 @@ app.on("ready", async () => {
     registerAsProtocolClient();
 
     // Run a update check
-    import("./main/update").then((m) => m.checkUpdate());
+    void import("./main/update").then((m) => m.checkUpdate());
   } catch (error) {
     if (error) {
       dialog.showErrorBox(
@@ -455,12 +423,7 @@ app.on("open-file", (e, path) => {
     file: path,
   });
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.webContents.send(
-    "channel.call",
-    "ipc.onipcmessagerecived",
-    2,
-    path
-  );
+  mainWindow.webContents.send("channel.call", "ipc.onipcmessagerecived", 2, path);
 });
 
 app.on("open-url", (e, url) => {
@@ -471,12 +434,7 @@ app.on("open-url", (e, url) => {
     url,
   });
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.webContents.send(
-    "channel.call",
-    "ipc.onipcmessagerecived",
-    3,
-    url
-  );
+  mainWindow.webContents.send("channel.call", "ipc.onipcmessagerecived", 3, url);
 });
 
 app.on("second-instance", async (event, argv) => {
@@ -489,17 +447,8 @@ app.on("second-instance", async (event, argv) => {
     return null;
   }, argv);
   if (cmd) {
-    mainWindow.webContents.send(
-      "channel.call",
-      "ipc.onipcmessagerecived",
-      ...cmd
-    );
+    mainWindow.webContents.send("channel.call", "ipc.onipcmessagerecived", ...cmd);
     return;
   }
-  mainWindow.webContents.send(
-    "channel.call",
-    "ipc.onipcmessagerecived",
-    1,
-    null
-  );
+  mainWindow.webContents.send("channel.call", "ipc.onipcmessagerecived", 1, null);
 });

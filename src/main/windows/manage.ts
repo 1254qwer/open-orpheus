@@ -8,11 +8,7 @@ import type { BrowserWindowConstructorOptions } from "electron";
 import packManager from "../pack";
 import WebPack from "../packs/WebPack";
 import { wasm as wasmDir } from "../folders";
-import {
-  httpCacheStorage,
-  lyricCacheManager,
-  playCacheManager,
-} from "../cache";
+import { httpCacheStorage, lyricCacheManager, playCacheManager } from "../cache";
 import { checkUpdate } from "../update";
 import { registerIpcHandlers } from "../../bridge/register";
 import type { ManageContract } from "../../bridge/contracts/manage-api";
@@ -34,7 +30,7 @@ const manageWindowOptions = {
   show: true,
   webPreferences: {
     partition: "open-orpheus",
-    preload: path.join(import.meta.dirname, "manage.js"),
+    preload: path.join(import.meta.dirname, "manage.cjs"),
   },
 } satisfies BrowserWindowConstructorOptions;
 
@@ -50,8 +46,7 @@ class ManageWindow extends ManagedWindow {
     this.loadGuiRoute("/");
     registerIpcHandlers<ManageContract>(manageWnd.webContents, "manage", {
       getFont: async () => font,
-      checkUpdate: async (event, ignoreCache = false) =>
-        await checkUpdate(ignoreCache),
+      checkUpdate: async (event, ignoreCache = false) => await checkUpdate(ignoreCache),
 
       pack: {
         getWebPackCommitHash: async () => {
@@ -71,12 +66,11 @@ class ManageWindow extends ManagedWindow {
             playCacheManager?.getInfo(),
             (async () => {
               if (!httpCacheStorage) return undefined;
-              const [entryCount, sizeBytes, sizeBytesOnDisk] =
-                await Promise.all([
-                  httpCacheStorage.entryCount(),
-                  httpCacheStorage.totalSize(),
-                  httpCacheStorage.diskSize(),
-                ]);
+              const [entryCount, sizeBytes, sizeBytesOnDisk] = await Promise.all([
+                httpCacheStorage.entryCount(),
+                httpCacheStorage.totalSize(),
+                httpCacheStorage.diskSize(),
+              ]);
               return { entryCount, sizeBytes, sizeBytesOnDisk };
             })(),
             lyricCacheManager?.getStats(),
@@ -104,11 +98,8 @@ class ManageWindow extends ManagedWindow {
 
           return {
             play: {
-              entryCount:
-                (await playCacheManager?.queryCacheTracks())?.length || 0,
-              sizeBytes: Math.round(
-                (playCacheInfo?.currentCachedSize || 0) * 1024 * 1024 * 1024
-              ),
+              entryCount: (await playCacheManager?.queryCacheTracks())?.length || 0,
+              sizeBytes: Math.round((playCacheInfo?.currentCachedSize || 0) * 1024 * 1024 * 1024),
             },
             http: httpStats ?? { entryCount: 0, sizeBytes: 0 },
             lyrics: lyrics ?? { entryCount: 0, sizeBytes: 0 },

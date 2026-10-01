@@ -51,10 +51,10 @@ export declare class DbusSubscription {
 export declare class MediaSession {
   constructor(name: string, identity: string, desktopEntry: string)
   setEventHandler(handler?: (((err: Error | null, arg: MediaSessionEvents) => Promise<undefined> | undefined)) | undefined | null): void
-  setMetadata(metadata?: MprisMetadata | undefined | null): object
-  setVolume(volume: number): object
-  updatePlaybackState(playbackState?: PlaybackState | undefined | null): object
-  sendSeeked(time: number): object
+  setMetadata(metadata?: MprisMetadata | undefined | null): Promise<void>
+  setVolume(volume: number): Promise<void>
+  updatePlaybackState(playbackState?: PlaybackState | undefined | null): Promise<void>
+  sendSeeked(time: number): Promise<void>
 }
 
 /** Arguments for [`DbusClient::call`]. */

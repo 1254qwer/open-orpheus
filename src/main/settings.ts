@@ -53,15 +53,14 @@ export function initialize() {
     const ret = await getMany(keys);
     for (let i = 0; i < keys.length; i++) {
       const defaultValue = KV_ENTRIES[keys[i]];
-      if (ret[i] === undefined && defaultValue !== undefined)
-        ret[i] = defaultValue as never;
+      if (ret[i] === undefined && defaultValue !== undefined) ret[i] = defaultValue as never;
     }
     return ret;
   };
 
   events = new Emittery();
   kv.onHook(KeyvHooks.BEFORE_SET, ({ key, value }) => {
-    events.emit("change", { key, value });
+    void events.emit("change", { key, value });
   });
   kv.onHook(KeyvHooks.AFTER_DELETE, ({ key }) => {
     const keys = Array.isArray(key) ? key : [key];

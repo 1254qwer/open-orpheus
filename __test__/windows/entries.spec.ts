@@ -10,20 +10,22 @@ vi.mock("../../src/bridge/preload", () => ({
     hoisted.exposeInMainWorld(prefix, values),
 }));
 
-// Importing these modules is what registers the API surface.
-import "../../src/windows/desktop-lyrics";
-import "../../src/windows/desktop-lyrics-preview";
-import "../../src/windows/manage";
-import "../../src/windows/menu";
-import "../../src/windows/mini-player";
-
 /** The prefixes exposed by the given module, in registration order. */
 function exposed() {
   return Object.fromEntries(hoisted.exposeInMainWorld.mock.calls);
 }
 
 describe("window preload entry points", () => {
-  it("exposes the API surface each window expects", () => {
+  it("exposes the API surface each window expects", async () => {
+    // Importing these modules is what registers the API surface. They are
+    // imported here rather than at file scope because Vitest clears mock call
+    // history before every test, which would wipe registrations made on import.
+    await import("../../src/windows/desktop-lyrics");
+    await import("../../src/windows/desktop-lyrics-preview");
+    await import("../../src/windows/manage");
+    await import("../../src/windows/menu");
+    await import("../../src/windows/mini-player");
+
     expect(exposed()).toEqual({
       desktopLyrics: { platform: process.platform },
       inputRegion: { platform: process.platform },
@@ -48,9 +50,7 @@ describe("window preload entry points", () => {
     }
 
     // Only the freshly imported module's registrations.
-    const menu = Object.fromEntries(
-      hoisted.exposeInMainWorld.mock.calls.slice(before)
-    );
+    const menu = Object.fromEntries(hoisted.exposeInMainWorld.mock.calls.slice(before));
 
     expect(menu).toEqual({
       menu: { wayland: true, submenu: false },

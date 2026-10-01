@@ -1,24 +1,13 @@
 import Emittery from "emittery";
 
-import {
-  MediaSession,
-  PlaybackStatus as DbusPlaybackStatus,
-} from "@open-orpheus/dbus";
+import { MediaSession, PlaybackStatus as DbusPlaybackStatus } from "@open-orpheus/dbus";
 
 import type { MprisMetadata } from "@open-orpheus/dbus";
 import { client } from "../../request";
 import { imageSize } from "../../../util";
-import {
-  artworkFileExists,
-  artworkFileUrl,
-  cacheArtwork,
-  remoteArtExt,
-} from "../artwork";
+import { artworkFileExists, artworkFileUrl, cacheArtwork, remoteArtExt } from "../artwork";
 import { PlaybackStatus, TrackInfo } from "../types";
-import {
-  MediaSessionAdapter,
-  PlayerCommandEvents,
-} from "./MediaSessionAdapter";
+import { MediaSessionAdapter, PlayerCommandEvents } from "./MediaSessionAdapter";
 
 // MPRIS uses microseconds, and we use seconds.
 const TIME_RATIO = 1_000_000;
@@ -45,8 +34,7 @@ export default class MprisAdapter
    * value once the renderer has confirmed that value — a write triggered by
    * some other (concurrent or in-app) change must not be mistaken for it.
    */
-  private volumeApplied: { volume: number; write: Promise<unknown> } | null =
-    null;
+  private volumeApplied: { volume: number; write: Promise<unknown> } | null = null;
 
   constructor() {
     super();
@@ -57,11 +45,7 @@ export default class MprisAdapter
       mprisName = desktopEntry = process.env.FLATPAK_ID;
     }
 
-    this.mediaSession = new MediaSession(
-      mprisName,
-      "Open Orpheus",
-      desktopEntry
-    );
+    this.mediaSession = new MediaSession(mprisName, "Open Orpheus", desktopEntry);
 
     this.mediaSession.setEventHandler(async (err, event) => {
       switch (event.type) {
@@ -109,7 +93,7 @@ export default class MprisAdapter
     this.metadata = track;
     this.artUrl = null; // album art for a new song arrives separately (onArtwork)
     if (!track) {
-      this.mediaSession.setMetadata(null);
+      void this.mediaSession.setMetadata(null);
       return;
     }
     this.pushMetadata();
@@ -124,7 +108,7 @@ export default class MprisAdapter
     this.position = position;
     this.pushPlaybackState();
     if (seeked) {
-      this.mediaSession.sendSeeked(position * TIME_RATIO);
+      void this.mediaSession.sendSeeked(position * TIME_RATIO);
     }
   }
 
@@ -146,7 +130,7 @@ export default class MprisAdapter
   }
 
   dispose(): void {
-    this.mediaSession.setMetadata(null);
+    void this.mediaSession.setMetadata(null);
     this.mediaSession.setEventHandler(null);
   }
 
@@ -160,7 +144,7 @@ export default class MprisAdapter
       artUrl: this.artUrl || undefined,
       length: this.duration ? this.duration * TIME_RATIO : undefined,
     };
-    this.mediaSession.setMetadata(metadata);
+    void this.mediaSession.setMetadata(metadata);
   }
 
   /**
@@ -186,10 +170,7 @@ export default class MprisAdapter
     this.pushMetadata();
   }
 
-  private async cacheArtworkLocally(
-    id: string,
-    artUrl: string
-  ): Promise<string> {
+  private async cacheArtworkLocally(id: string, artUrl: string): Promise<string> {
     // Already local (embedded art extracted by the media-session layer).
     if (artUrl.startsWith("file://")) return artUrl;
     // Fetch a reasonably-sized thumbnail instead of the original (potentially
@@ -213,7 +194,7 @@ export default class MprisAdapter
 
   private pushPlaybackState(): void {
     if (this.position === null) return;
-    this.mediaSession.updatePlaybackState({
+    void this.mediaSession.updatePlaybackState({
       status: toDbusStatus(this.status),
       position: this.position * TIME_RATIO,
       speed: this.rate,

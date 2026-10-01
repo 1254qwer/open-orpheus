@@ -139,7 +139,7 @@ impl MediaSession {
         self.dispatcher.set(handler.map(Arc::new));
     }
 
-    #[napi]
+    #[napi(ts_return_type = "Promise<void>")]
     pub fn set_metadata<'a>(
         &'a self,
         env: &'a Env,
@@ -152,7 +152,7 @@ impl MediaSession {
         })
     }
 
-    #[napi]
+    #[napi(ts_return_type = "Promise<void>")]
     pub fn set_volume<'a>(&'a self, env: &'a Env, volume: f64) -> Result<Object<'a>> {
         let conn = self.conn.clone();
         let state = self.state.clone();
@@ -161,7 +161,7 @@ impl MediaSession {
         })
     }
 
-    #[napi]
+    #[napi(ts_return_type = "Promise<void>")]
     pub fn update_playback_state<'a>(
         &'a self,
         env: &'a Env,
@@ -174,7 +174,7 @@ impl MediaSession {
         })
     }
 
-    #[napi]
+    #[napi(ts_return_type = "Promise<void>")]
     pub fn send_seeked<'a>(&'a self, env: &'a Env, time: i64) -> Result<Object<'a>> {
         let conn = self.conn.clone();
         napi_deferred_task!(env, async { mpris::send_seeked(&conn, time).await })

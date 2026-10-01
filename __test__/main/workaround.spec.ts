@@ -15,9 +15,7 @@ type WorkaroundModule = typeof import("../../src/main/menu/workaround");
 type WorkaroundFlag = Parameters<WorkaroundModule["workaroundEnabled"]>[0];
 
 /** Load the module with a controlled environment (its flags are set at import). */
-async function loadWorkarounds(
-  env: Record<string, string | undefined>
-): Promise<WorkaroundModule> {
+async function loadWorkarounds(env: Record<string, string | undefined>): Promise<WorkaroundModule> {
   vi.resetModules();
   vi.unstubAllEnvs();
   for (const [name, value] of Object.entries(env)) {
@@ -88,17 +86,13 @@ describe("workaround flags", () => {
       XDG_CURRENT_DESKTOP: "GNOME",
       MENU_OVERLAY_NO_MAXIMIZE: "true",
     });
-    expect(
-      enabled.workaroundFlags & enabled.WorkaroundFlags.OverlayNoMaximize
-    ).not.toBe(0);
+    expect(enabled.workaroundFlags & enabled.WorkaroundFlags.OverlayNoMaximize).not.toBe(0);
 
     const forced = await loadWorkarounds({
       XDG_CURRENT_DESKTOP: "niri",
       MENU_OVERLAY_FORCE_MAXIMIZE: "1",
     });
-    expect(
-      forced.workaroundFlags & forced.WorkaroundFlags.OverlayNoMaximize
-    ).toBe(0);
+    expect(forced.workaroundFlags & forced.WorkaroundFlags.OverlayNoMaximize).toBe(0);
   });
 });
 
@@ -117,13 +111,10 @@ describe("workaroundEnabled", () => {
       XDG_CURRENT_DESKTOP: "niri",
     });
 
-    const both =
-      WorkaroundFlags.OverlayNoFullscreen | WorkaroundFlags.OverlayNoMaximize;
+    const both = WorkaroundFlags.OverlayNoFullscreen | WorkaroundFlags.OverlayNoMaximize;
 
     expect(workaroundEnabled(both)).toBe(true);
-    expect(workaroundEnabled(both & ~WorkaroundFlags.OverlayNoMaximize)).toBe(
-      true
-    );
+    expect(workaroundEnabled(both & ~WorkaroundFlags.OverlayNoMaximize)).toBe(true);
     expect(workaroundEnabled(0 as WorkaroundFlag)).toBe(false);
   });
 });

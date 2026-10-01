@@ -76,8 +76,7 @@ function svelteKitPlugin(): Plugin {
     // Rollup requires at least one input entry; resolve this virtual module to
     // an empty module so the Rollup pass produces no real output of its own.
     resolveId(id) {
-      if (id === "virtual:sveltekit-bridge")
-        return "\0virtual:sveltekit-bridge";
+      if (id === "virtual:sveltekit-bridge") return "\0virtual:sveltekit-bridge";
     },
     load(id) {
       if (id === "\0virtual:sveltekit-bridge") return "export default {}";

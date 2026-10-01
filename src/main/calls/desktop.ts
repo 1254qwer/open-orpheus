@@ -35,11 +35,9 @@ registerCallHandler<
     offscreen: false,
     support:
       isLayerShellAvailable() ||
-      [
-        DesktopEnvironment.X11,
-        DesktopEnvironment.Windows,
-        DesktopEnvironment.Darwin,
-      ].includes(getDesktopEnvironment()),
+      [DesktopEnvironment.X11, DesktopEnvironment.Windows, DesktopEnvironment.Darwin].includes(
+        getDesktopEnvironment()
+      ),
   },
 ]);
 
@@ -56,15 +54,12 @@ registerCallHandler<
   // Checked before the current window is dropped, so a bad request changes
   // nothing.
   if (!isAppUrl(params.url)) {
-    LOGGER.warn(
-      { url: params.url },
-      "refused to create the music desktop window for url"
-    );
+    LOGGER.warn({ url: params.url }, "refused to create the music desktop window for url");
     return;
   }
   if (musicDesktopWindow) musicDesktopWindow.destroy();
   musicDesktopWindow = new MusicDesktopWindow(params.url);
-  if (params.visible) musicDesktopWindow.show();
+  if (params.visible) void musicDesktopWindow.show();
 });
 
 registerCallHandler<
@@ -77,8 +72,8 @@ registerCallHandler<
   void
 >("desktop.show", (event, params) => {
   if (!musicDesktopWindow) return;
-  if (params.visible) musicDesktopWindow.show();
-  else musicDesktopWindow.hide();
+  if (params.visible) void musicDesktopWindow.show();
+  else void musicDesktopWindow.hide();
 });
 
 registerCallHandler<[], void>("desktop.destroy", () => {

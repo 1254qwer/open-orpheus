@@ -135,10 +135,7 @@ describe("parseWebCommand", () => {
 
 describe("parseMoveRun", () => {
   it("reads the source and destination of a --moverun command", () => {
-    expect(parseMoveRun("--moverun", 0, ["--moverun", "src", "dest"])).toEqual([
-      "src",
-      "dest",
-    ]);
+    expect(parseMoveRun("--moverun", 0, ["--moverun", "src", "dest"])).toEqual(["src", "dest"]);
   });
 
   it("ignores a --moverun without both operands", () => {
@@ -147,9 +144,7 @@ describe("parseMoveRun", () => {
   });
 
   it("ignores other arguments", () => {
-    expect(
-      parseMoveRun("orpheus://x", 0, ["orpheus://x", "src", "dest"])
-    ).toBeNull();
+    expect(parseMoveRun("orpheus://x", 0, ["orpheus://x", "src", "dest"])).toBeNull();
     expect(parseMoveRun("src", 1, ["--moverun", "src", "dest"])).toBeNull();
   });
 });
@@ -161,17 +156,13 @@ describe("parseLocalFile", () => {
       normalize("music/album/song.mp3")
     );
 
-    expect(hoisted.fileExists).toHaveBeenCalledWith(
-      normalize("music/album/song.mp3")
-    );
+    expect(hoisted.fileExists).toHaveBeenCalledWith(normalize("music/album/song.mp3"));
   });
 
   it("normalises the path before checking it", async () => {
     await parseLocalFile("music/./album/../song.mp3");
 
-    expect(hoisted.fileExists).toHaveBeenCalledWith(
-      normalize("music/song.mp3")
-    );
+    expect(hoisted.fileExists).toHaveBeenCalledWith(normalize("music/song.mp3"));
   });
 
   it("rejects paths that are not music files", async () => {
@@ -206,15 +197,10 @@ describe("parseLocalFile", () => {
   });
 });
 
-describe.runIf(process.platform === "win32")(
-  "parseLocalFile on Windows",
-  () => {
-    it("converts forward slashes to backslashes", async () => {
-      await expect(parseLocalFile("music/album/song.mp3")).resolves.toBe(
-        "music\\album\\song.mp3"
-      );
+describe.runIf(process.platform === "win32")("parseLocalFile on Windows", () => {
+  it("converts forward slashes to backslashes", async () => {
+    await expect(parseLocalFile("music/album/song.mp3")).resolves.toBe("music\\album\\song.mp3");
 
-      expect(hoisted.fileExists).toHaveBeenCalledWith("music\\album\\song.mp3");
-    });
-  }
-);
+    expect(hoisted.fileExists).toHaveBeenCalledWith("music\\album\\song.mp3");
+  });
+});

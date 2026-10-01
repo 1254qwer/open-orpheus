@@ -34,9 +34,7 @@
         <Field.Field orientation="horizontal">
           <Field.Content>
             <Field.Title>正常应用限制</Field.Title>
-            <Field.Description>
-              主窗口将遵循网易云音乐设置的大小限制。
-            </Field.Description>
+            <Field.Description>主窗口将遵循网易云音乐设置的大小限制。</Field.Description>
           </Field.Content>
           <RadioGroup.Item id="main-window-size-limit-false" value="false" />
         </Field.Field>

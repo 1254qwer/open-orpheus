@@ -1,15 +1,8 @@
 import { dirname } from "node:path";
 
-import {
-  LineMode,
-  ShowTranslate,
-  TextAlignType,
-} from "$sharedTypes/desktop-lyrics";
+import { LineMode, ShowTranslate, TextAlignType } from "$sharedTypes/desktop-lyrics";
 import { LyricsStore } from "$sharedTypes/lyrics";
-import {
-  MiniPlayerLikeMark,
-  MiniPlayerTogetherStatus,
-} from "$sharedTypes/mini-player";
+import { MiniPlayerLikeMark, MiniPlayerTogetherStatus } from "$sharedTypes/mini-player";
 import { mkdir, writeFile } from "node:fs/promises";
 import { registerCallHandler } from "../calls";
 import { storage as storageDir } from "../folders";
@@ -109,25 +102,19 @@ type ListElement = {
   alias: string;
   cloud: 0 | 1;
 };
-registerCallHandler<[string], [boolean]>(
-  "player.addListElement",
-  (_event, json) => {
-    const listElements = JSON.parse(json) as ListElement[];
-    listItems = listItems.concat(listElements);
-    updateListData(listItems, currentPlay);
-    return [true];
-  }
-);
+registerCallHandler<[string], [boolean]>("player.addListElement", (_event, json) => {
+  const listElements = JSON.parse(json) as ListElement[];
+  listItems = listItems.concat(listElements);
+  updateListData(listItems, currentPlay);
+  return [true];
+});
 
-registerCallHandler<[string], [boolean]>(
-  "player.deleteListElement",
-  (_event, json) => {
-    const removals = JSON.parse(json) as string[];
-    listItems = listItems.filter((v) => !removals.includes(v.id));
-    updateListData(listItems, currentPlay);
-    return [true];
-  }
-);
+registerCallHandler<[string], [boolean]>("player.deleteListElement", (_event, json) => {
+  const removals = JSON.parse(json) as string[];
+  listItems = listItems.filter((v) => !removals.includes(v.id));
+  updateListData(listItems, currentPlay);
+  return [true];
+});
 
 registerCallHandler<[], [boolean]>("player.removeAll", () => {
   listItems = [];
@@ -136,14 +123,11 @@ registerCallHandler<[], [boolean]>("player.removeAll", () => {
   return [true];
 });
 
-registerCallHandler<[string], [boolean]>(
-  "player.setCurrentPlay",
-  (_event, id) => {
-    currentPlay = id;
-    updateListData(listItems, currentPlay);
-    return [true];
-  }
-);
+registerCallHandler<[string], [boolean]>("player.setCurrentPlay", (_event, id) => {
+  currentPlay = id;
+  updateListData(listItems, currentPlay);
+  return [true];
+});
 
 registerCallHandler<[string], [boolean]>("player.setCover", (_event, url) => {
   updateCoverUrl(url);
@@ -152,21 +136,15 @@ registerCallHandler<[string], [boolean]>("player.setCover", (_event, url) => {
   return [true];
 });
 
-registerCallHandler<[MiniPlayerLikeMark], [boolean]>(
-  "player.setLikeMark",
-  (_event, likeMark) => {
-    updateLikeMark(likeMark);
-    return [true];
-  }
-);
+registerCallHandler<[MiniPlayerLikeMark], [boolean]>("player.setLikeMark", (_event, likeMark) => {
+  updateLikeMark(likeMark);
+  return [true];
+});
 
-registerCallHandler<[0 | 1], [boolean]>(
-  "player.setFavour",
-  (_event, favour) => {
-    updateFavour(favour > 0);
-    return [true];
-  }
-);
+registerCallHandler<[0 | 1], [boolean]>("player.setFavour", (_event, favour) => {
+  updateFavour(favour > 0);
+  return [true];
+});
 
 registerCallHandler<[boolean], [boolean]>("player.mute", (event, mute) => {
   updateMute(mute);
@@ -193,13 +171,10 @@ registerCallHandler<[MiniPlayerTogetherStatus], [boolean]>(
   }
 );
 
-registerCallHandler<[number, boolean], [boolean]>(
-  "player.showVolume",
-  (event, volume, muted) => {
-    showVolume(volume, muted);
-    return [true];
-  }
-);
+registerCallHandler<[number, boolean], [boolean]>("player.showVolume", (event, volume, muted) => {
+  showVolume(volume, muted);
+  return [true];
+});
 
 registerCallHandler<
   [
@@ -235,45 +210,30 @@ registerCallHandler<
   return [true];
 });
 
-registerCallHandler<[string], [boolean]>(
-  "player.setLRCSlogan",
-  (event, slogan) => {
-    lyricsDispatcher.slogan = slogan;
-    return [true];
-  }
-);
+registerCallHandler<[string], [boolean]>("player.setLRCSlogan", (event, slogan) => {
+  lyricsDispatcher.slogan = slogan;
+  return [true];
+});
 
-registerCallHandler<[string, string], [boolean]>(
-  "player.setTextAlign",
-  (evnet, upper, lower) => {
-    lyricsStyle.textAlign = [upper as TextAlignType, lower as TextAlignType];
-    return [refreshLyricsStyle()];
-  }
-);
+registerCallHandler<[string, string], [boolean]>("player.setTextAlign", (evnet, upper, lower) => {
+  lyricsStyle.textAlign = [upper as TextAlignType, lower as TextAlignType];
+  return [refreshLyricsStyle()];
+});
 
-registerCallHandler<[boolean], [boolean]>(
-  "player.setLineMode",
-  (event, singleLine) => {
-    lyricsStyle.lineMode = singleLine ? LineMode.Single : LineMode.Double;
-    return [refreshLyricsStyle()];
-  }
-);
+registerCallHandler<[boolean], [boolean]>("player.setLineMode", (event, singleLine) => {
+  lyricsStyle.lineMode = singleLine ? LineMode.Single : LineMode.Double;
+  return [refreshLyricsStyle()];
+});
 
-registerCallHandler<[boolean], [boolean]>(
-  "player.setDesktopLyricTopMost",
-  (event, topMost) => {
-    desktopLyricsWindow.setAlwaysOnTop(topMost);
-    return [true];
-  }
-);
+registerCallHandler<[boolean], [boolean]>("player.setDesktopLyricTopMost", (event, topMost) => {
+  desktopLyricsWindow.setAlwaysOnTop(topMost);
+  return [true];
+});
 
-registerCallHandler<[ShowTranslate], [boolean]>(
-  "player.showTranslateLyric",
-  (event, mode) => {
-    lyricsStyle.showTranslate = mode as ShowTranslate;
-    return [refreshLyricsStyle()];
-  }
-);
+registerCallHandler<[ShowTranslate], [boolean]>("player.showTranslateLyric", (event, mode) => {
+  lyricsStyle.showTranslate = mode as ShowTranslate;
+  return [refreshLyricsStyle()];
+});
 
 registerCallHandler<[string, string, string, string], [boolean]>(
   "player.setLRCColor",
@@ -311,21 +271,15 @@ registerCallHandler<[boolean, boolean, boolean, boolean], [boolean]>(
   }
 );
 
-registerCallHandler<[boolean], [boolean]>(
-  "player.showHorizontalLyric",
-  (event, horizontal) => {
-    lyricsStyle.vertical = !horizontal;
-    return [refreshLyricsStyle()];
-  }
-);
+registerCallHandler<[boolean], [boolean]>("player.showHorizontalLyric", (event, horizontal) => {
+  lyricsStyle.vertical = !horizontal;
+  return [refreshLyricsStyle()];
+});
 
-registerCallHandler<[string, number], [boolean]>(
-  "player.setFont",
-  (event, font) => {
-    setFont(font);
-    return [true];
-  }
-);
+registerCallHandler<[string, number], [boolean]>("player.setFont", (event, font) => {
+  setFont(font);
+  return [true];
+});
 
 registerCallHandler<[string, string, string], [boolean]>(
   "player.setLRCFont",
@@ -343,12 +297,9 @@ registerCallHandler<[boolean], [boolean]>("player.setLock", (event, locked) => {
   return [setLyricsLocked(locked)];
 });
 
-registerCallHandler<[number], [boolean]>(
-  "player.setOffset",
-  (event, offset) => {
-    return [setLyricsOffset(offset)];
-  }
-);
+registerCallHandler<[number], [boolean]>("player.setOffset", (event, offset) => {
+  return [setLyricsOffset(offset)];
+});
 
 registerCallHandler<[string, string], [boolean]>(
   "player.renderLRCImage",
@@ -356,26 +307,13 @@ registerCallHandler<[string, string], [boolean]>(
     // This call must be returned AFTER result is called.
     const filePath = sanitizeRelativePath(storageDir, path);
     if (filePath === false) {
-      LOGGER.warn(
-        { path },
-        "Attempted to save desktop lyrics preview to invalid path"
-      );
+      LOGGER.warn({ path }, "Attempted to save desktop lyrics preview to invalid path");
       return [false];
     }
-    const [buf, [width, height]] = await createDesktopLyricsPreview(
-      lyricsStyle,
-      text
-    );
+    const [buf, [width, height]] = await createDesktopLyricsPreview(lyricsStyle, text);
     await mkdir(dirname(filePath), { recursive: true });
     await writeFile(filePath, buf);
-    event.sender.send(
-      "channel.call",
-      "player.onRenderLRCImageResult",
-      path,
-      true,
-      width,
-      height
-    );
+    event.sender.send("channel.call", "player.onRenderLRCImageResult", path, true, width, height);
     return [true];
   }
 );

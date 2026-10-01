@@ -4,12 +4,10 @@ import { dirname, resolve } from "node:path";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerZIP } from "@electron-forge/maker-zip";
-import { MakerAppImage } from "@reforged/maker-appimage";
+import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
-
-import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives"; // TODO: Remove in Electron Forge 8
 
 import * as options from "./packaging/options";
 
@@ -24,91 +22,67 @@ const config: ForgeConfig = {
     asar: {
       unpack: "**/*.{so*,dylib,dll}",
     },
-    derefSymlinks: true, // TODO: Remove in Electron Forge 8
 
     afterExtract: [
-      (buildPath, electronVersion, platform, arch, callback) => {
-        (async () => {
-          if (platform === "mas" || platform === "darwin") {
-            const resourcesPath = resolve(
-              buildPath,
-              "Electron.app/Contents/Resources"
-            );
-            const frameworkResourcesPath = resolve(
-              buildPath,
-              "Electron.app/Contents/Frameworks/Electron Framework.framework/Resources"
-            );
+      async ({ buildPath, platform }) => {
+        if (platform === "mas" || platform === "darwin") {
+          const resourcesPath = resolve(buildPath, "Electron.app/Contents/Resources");
+          const frameworkResourcesPath = resolve(
+            buildPath,
+            "Electron.app/Contents/Frameworks/Electron Framework.framework/Resources"
+          );
 
-            const resources = await readdir(resourcesPath, {
-              withFileTypes: true,
-            });
-            const frameworkResources = await readdir(frameworkResourcesPath, {
-              withFileTypes: true,
-            });
-            await Promise.all(
-              [...resources, ...frameworkResources].map(async (locale) => {
-                if (!locale.isDirectory() || !locale.name.endsWith(".lproj"))
-                  return;
-                if (
-                  LOCALES.some((v) =>
-                    locale.name.replace("_", "-").startsWith(v)
-                  )
-                )
-                  return;
-                await rm(resolve(locale.parentPath, locale.name), {
-                  recursive: true,
-                });
-              })
-            );
-
-            return;
-          }
-          const localesPath = resolve(buildPath, "locales");
-
-          const locales = await readdir(localesPath, { withFileTypes: true });
+          const resources = await readdir(resourcesPath, {
+            withFileTypes: true,
+          });
+          const frameworkResources = await readdir(frameworkResourcesPath, {
+            withFileTypes: true,
+          });
           await Promise.all(
-            locales.map(async (locale) => {
-              if (!locale.isFile()) return;
-              if (
-                LOCALES.includes(
-                  locale.name
-                    .substring(0, locale.name.length - 4)
-                    .replace("_", "-")
-                )
-              )
-                return;
-              await rm(resolve(locale.parentPath, locale.name));
+            [...resources, ...frameworkResources].map(async (locale) => {
+              if (!locale.isDirectory() || !locale.name.endsWith(".lproj")) return;
+              if (LOCALES.some((v) => locale.name.replace("_", "-").startsWith(v))) return;
+              await rm(resolve(locale.parentPath, locale.name), {
+                recursive: true,
+              });
             })
           );
-        })()
-          .then(() => callback())
-          .catch((err) => callback(new Error(String(err))));
+
+          return;
+        }
+        const localesPath = resolve(buildPath, "locales");
+
+        const locales = await readdir(localesPath, { withFileTypes: true });
+        await Promise.all(
+          locales.map(async (locale) => {
+            if (!locale.isFile()) return;
+            if (
+              LOCALES.includes(locale.name.substring(0, locale.name.length - 4).replace("_", "-"))
+            )
+              return;
+            await rm(resolve(locale.parentPath, locale.name));
+          })
+        );
       },
       // Extract LICENSES.chromium.html to a separate directory when
       // EXTRACT_LICENSES_TO is set, then remove it from the build.
-      (buildPath, _electronVersion, platform, _arch, callback) => {
-        (async () => {
-          const destDir = process.env.EXTRACT_LICENSES_TO;
-          if (destDir) {
-            platform = platform === "mas" ? "darwin" : platform;
-            const src = resolve(buildPath, "LICENSES.chromium.html");
-            const dest = resolve(destDir, `LICENSES.chromium.${platform}.html`);
-            await mkdir(dirname(dest), { recursive: true });
-            await copyFile(src, dest);
-            await rm(src);
-          }
-        })()
-          .then(() => callback())
-          .catch((err) => callback(new Error(String(err))));
+      async ({ buildPath, platform }) => {
+        const destDir = process.env.EXTRACT_LICENSES_TO;
+        if (destDir) {
+          platform = platform === "mas" ? "darwin" : platform;
+          const src = resolve(buildPath, "LICENSES.chromium.html");
+          const dest = resolve(destDir, `LICENSES.chromium.${platform}.html`);
+          await mkdir(dirname(dest), { recursive: true });
+          await copyFile(src, dest);
+          await rm(src);
+        }
       },
     ],
 
     // In offline environments (e.g. flatpak sandbox), SHASUMS256.txt cannot be
     // downloaded from GitHub. The electron zip is already verified by sha256 in
     // generated-node-sources.json, so it's safe to skip checksum verification.
-    ...(process.env.ELECTRON_OFFLINE_BUILD
-      ? { download: { unsafelyDisableChecksums: true } }
-      : {}),
+    ...(process.env.ELECTRON_OFFLINE_BUILD ? { download: { unsafelyDisableChecksums: true } } : {}),
 
     // Override Vite Plugin's preferences, and with our preferences
     ignore: (file: string) => {
@@ -129,9 +103,6 @@ const config: ForgeConfig = {
     new MakerSquirrel(options.squirrel),
     new MakerZIP({}, ["darwin"]),
     new MakerFlatpak(options.flatpak),
-    new MakerAppImage({
-      options: options.AppImage,
-    }),
     new MakerDeb(options.deb),
     new MakerRpm(options.rpm),
   ],

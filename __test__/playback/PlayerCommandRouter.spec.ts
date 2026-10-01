@@ -26,10 +26,7 @@ vi.mock("../../src/main/window", () => ({
 const track = { id: "1", title: "title", artist: "artist", album: "album" };
 
 /** A controller in `status`, retaining a track unless `retained` is false. */
-function controllerAt(
-  status: PlaybackStatus,
-  retained = true
-): PlaybackController {
+function controllerAt(status: PlaybackStatus, retained = true): PlaybackController {
   const player = new PlaybackController();
   if (retained) player.setTrack(track);
   if (status === PlaybackStatus.Playing) {
@@ -48,12 +45,7 @@ function setup(status: PlaybackStatus, retained = true) {
 }
 
 const expectToggle = () =>
-  expect(send).toHaveBeenCalledWith(
-    "channel.call",
-    "winhelper.onHotkey",
-    "play_pause_3",
-    true
-  );
+  expect(send).toHaveBeenCalledWith("channel.call", "winhelper.onHotkey", "play_pause_3", true);
 
 /** Let Emittery reach (and run) its listeners before asserting on them. */
 async function flushMicrotasks(): Promise<void> {
@@ -161,16 +153,7 @@ describe("PlayerCommandRouter command routing", () => {
 
     const subscribed = on.mock.calls.map(([eventName]) => String(eventName));
     expect(subscribed.sort()).toEqual(
-      [
-        "next",
-        "pause",
-        "play",
-        "previous",
-        "seek",
-        "setPosition",
-        "toggle",
-        "volume",
-      ].sort()
+      ["next", "pause", "play", "previous", "seek", "setPosition", "toggle", "volume"].sort()
     );
   });
 
@@ -187,21 +170,11 @@ describe("PlayerCommandRouter command routing", () => {
     const { commands } = setup(PlaybackStatus.Paused);
 
     await commands.emit("next");
-    expect(send).toHaveBeenCalledWith(
-      "channel.call",
-      "winhelper.onHotkey",
-      "next_1",
-      true
-    );
+    expect(send).toHaveBeenCalledWith("channel.call", "winhelper.onHotkey", "next_1", true);
 
     send.mockClear();
     await commands.emit("previous");
-    expect(send).toHaveBeenCalledWith(
-      "channel.call",
-      "winhelper.onHotkey",
-      "prev_1",
-      true
-    );
+    expect(send).toHaveBeenCalledWith("channel.call", "winhelper.onHotkey", "prev_1", true);
   });
 
   it("keeps relative and absolute seeks on separate channels", async () => {

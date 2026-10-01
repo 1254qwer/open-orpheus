@@ -3,11 +3,7 @@ import path from "node:path";
 import os from "node:os";
 
 import type { AppMenuItem } from "$sharedTypes/menu";
-import {
-  DesktopEnvironment,
-  dragWindow,
-  getDesktopEnvironment,
-} from "@open-orpheus/window";
+import { DesktopEnvironment, dragWindow, getDesktopEnvironment } from "@open-orpheus/window";
 
 import { registerCallHandler } from "../calls";
 import { loadFromOrpheusUrl } from "../orpheus";
@@ -38,49 +34,44 @@ type MenuContainer = {
 type MenuRequest = [MenuContainer, number];
 
 // TODO: Implement this properly
-registerCallHandler<[], [boolean]>("winhelper.isWindowFullScreen", () => [
-  false,
-]);
+registerCallHandler<[], [boolean]>("winhelper.isWindowFullScreen", () => [false]);
 
-registerCallHandler<
-  ["minimize" | "maximize" | "restore" | "hide" | "show"],
-  [boolean]
->("winhelper.showWindow", (event, show) => {
-  const wnd = BrowserWindow.fromWebContents(event.sender);
-  if (!wnd) return [false];
-
-  switch (show) {
-    case "minimize":
-      wnd.minimize();
-      break;
-    case "maximize":
-      wnd.maximize();
-      break;
-    case "restore":
-      wnd.restore();
-      break;
-    case "hide":
-      wnd.hide();
-      break;
-    case "show":
-      wnd.show();
-      break;
-  }
-
-  return [true];
-});
-
-registerCallHandler<[string], void>(
-  "winhelper.setWindowTitle",
-  (event, title) => {
-    // Through the wrapper: the native layer keys the window on the id that
-    // rides in its title, so a title written straight to the window would drop
-    // the name the window is known by.
+registerCallHandler<["minimize" | "maximize" | "restore" | "hide" | "show"], [boolean]>(
+  "winhelper.showWindow",
+  (event, show) => {
     const wnd = BrowserWindow.fromWebContents(event.sender);
-    const managed = wnd ? ManagedWindow.fromBrowserWindow(wnd) : null;
-    managed?.setTitle(title);
+    if (!wnd) return [false];
+
+    switch (show) {
+      case "minimize":
+        wnd.minimize();
+        break;
+      case "maximize":
+        wnd.maximize();
+        break;
+      case "restore":
+        wnd.restore();
+        break;
+      case "hide":
+        wnd.hide();
+        break;
+      case "show":
+        wnd.show();
+        break;
+    }
+
+    return [true];
   }
 );
+
+registerCallHandler<[string], void>("winhelper.setWindowTitle", (event, title) => {
+  // Through the wrapper: the native layer keys the window on the id that
+  // rides in its title, so a title written straight to the window would drop
+  // the name the window is known by.
+  const wnd = BrowserWindow.fromWebContents(event.sender);
+  const managed = wnd ? ManagedWindow.fromBrowserWindow(wnd) : null;
+  managed?.setTitle(title);
+});
 
 registerCallHandler<[string], void>(
   "winhelper.setWindowIconFromLocalFile",
@@ -100,10 +91,7 @@ registerCallHandler<[], void>("winhelper.initMainWindow", () => {
 });
 registerCallHandler<[], void>("winhelper.finishLoadMainWindow", (event) => {
   // Window cannot be not existing at this time
-  setLifecycleState(
-    LifecycleState.MainWindowLoaded,
-    BrowserWindow.fromWebContents(event.sender)!
-  );
+  setLifecycleState(LifecycleState.MainWindowLoaded, BrowserWindow.fromWebContents(event.sender)!);
 });
 
 type WindowPosition = {
@@ -121,9 +109,7 @@ registerCallHandler<[WindowPosition], void>(
     const managedWindow = ManagedWindow.fromBrowserWindow(wnd);
     // Ignore requests from music desktop window
     if (managedWindow instanceof MusicDesktopWindow) return;
-    const scaleFactor = shouldApplyScaleFactor()
-      ? getWindowScaleFactor(wnd)
-      : 1;
+    const scaleFactor = shouldApplyScaleFactor() ? getWindowScaleFactor(wnd) : 1;
     width = Math.round(width / scaleFactor);
     height = Math.round(height / scaleFactor);
     x = Math.round(x / scaleFactor);
@@ -133,25 +119,22 @@ registerCallHandler<[WindowPosition], void>(
   }
 );
 
-registerCallHandler<[], [WindowPosition]>(
-  "winhelper.getWindowPosition",
-  (event) => {
-    const wnd = BrowserWindow.fromWebContents(event.sender);
-    if (!wnd) return [{ width: 0, height: 0, x: 0, y: 0, topmost: false }];
+registerCallHandler<[], [WindowPosition]>("winhelper.getWindowPosition", (event) => {
+  const wnd = BrowserWindow.fromWebContents(event.sender);
+  if (!wnd) return [{ width: 0, height: 0, x: 0, y: 0, topmost: false }];
 
-    const bounds = wnd.getBounds();
-    const topmost = wnd.isAlwaysOnTop();
-    return [
-      {
-        width: bounds.width,
-        height: bounds.height,
-        x: bounds.x,
-        y: bounds.y,
-        topmost,
-      },
-    ];
-  }
-);
+  const bounds = wnd.getBounds();
+  const topmost = wnd.isAlwaysOnTop();
+  return [
+    {
+      width: bounds.width,
+      height: bounds.height,
+      x: bounds.x,
+      y: bounds.y,
+      topmost,
+    },
+  ];
+});
 
 type SizeLimit = { x: number; y: number };
 let mainWindowSizeLimits: [SizeLimit, SizeLimit] | null = null;
@@ -160,9 +143,7 @@ registerCallHandler<[{ x: number; y: number }, { x: number; y: number }], void>(
   async (event, min, max) => {
     const wnd = BrowserWindow.fromWebContents(event.sender);
     if (!wnd) return;
-    const scaleFactor = shouldApplyScaleFactor()
-      ? getWindowScaleFactor(wnd)
-      : 1;
+    const scaleFactor = shouldApplyScaleFactor() ? getWindowScaleFactor(wnd) : 1;
     if (
       wnd !== mainWindow ||
       (await settings.kv.get("window.overrideMainWindowSizeLimit")) !== "true"
@@ -175,10 +156,7 @@ registerCallHandler<[{ x: number; y: number }, { x: number; y: number }], void>(
       }
     }
     if (wnd == mainWindow) {
-      mainWindowSizeLimits = [
-        min,
-        { x: max.x * scaleFactor, y: max.y * scaleFactor },
-      ];
+      mainWindowSizeLimits = [min, { x: max.x * scaleFactor, y: max.y * scaleFactor }];
     }
   }
 );
@@ -192,14 +170,8 @@ settings.events.on("change", (e) => {
       managed.setMinimumSize(0, 0);
       managed.setMaximumSize(0, 0);
     } else {
-      managed.setMinimumSize(
-        mainWindowSizeLimits[0].x,
-        mainWindowSizeLimits[0].y
-      );
-      managed.setMaximumSize(
-        mainWindowSizeLimits[1].x,
-        mainWindowSizeLimits[1].y
-      );
+      managed.setMinimumSize(mainWindowSizeLimits[0].x, mainWindowSizeLimits[0].y);
+      managed.setMaximumSize(mainWindowSizeLimits[1].x, mainWindowSizeLimits[1].y);
     }
   }
 });
@@ -231,7 +203,7 @@ registerCallHandler<
     await wnd.show();
     wnd.window?.focus();
   } else {
-    wnd.hide();
+    void wnd.hide();
   }
   return;
 });
@@ -263,7 +235,7 @@ registerCallHandler<[string, WindowDimensions, WindowAttributes], [boolean]>(
       backgroundColor: attributes.bk_color,
       frame: !attributes.spec_window, // is this correct?
       webPreferences: {
-        preload: path.join(import.meta.dirname, "preload.js"),
+        preload: path.join(import.meta.dirname, "preload.cjs"),
       },
     }).window;
     if (wnd) void wnd.loadURL(url);
@@ -340,30 +312,24 @@ registerCallHandler<[string, string[], boolean, { id: string }], void>(
   }
 );
 
-registerCallHandler<[boolean], void>(
-  "winhelper.setWindowFullScreen",
-  (event, fullscreen) => {
-    const wnd = BrowserWindow.fromWebContents(event.sender);
-    if (!wnd) return;
-    wnd.setFullScreen(fullscreen);
-  }
-);
+registerCallHandler<[boolean], void>("winhelper.setWindowFullScreen", (event, fullscreen) => {
+  const wnd = BrowserWindow.fromWebContents(event.sender);
+  if (!wnd) return;
+  wnd.setFullScreen(fullscreen);
+});
 
-registerCallHandler<MenuRequest, void>(
-  "winhelper.updateMenu",
-  async (event, data /*id*/) => {
-    const wnd = BrowserWindow.fromWebContents(event.sender);
-    if (!wnd) return;
-    const managed = ManagedWindow.fromBrowserWindow(wnd);
-    if (!managed) return;
-    const menu = managed.getData("menu");
-    if (!menu) {
-      return;
-    }
-    const menuItems = JSON.parse(data.content) as AppMenuItem[];
-    menu.update(menuItems);
+registerCallHandler<MenuRequest, void>("winhelper.updateMenu", async (event, data /*id*/) => {
+  const wnd = BrowserWindow.fromWebContents(event.sender);
+  if (!wnd) return;
+  const managed = ManagedWindow.fromBrowserWindow(wnd);
+  if (!managed) return;
+  const menu = managed.getData("menu");
+  if (!menu) {
+    return;
   }
-);
+  const menuItems = JSON.parse(data.content) as AppMenuItem[];
+  menu.update(menuItems);
+});
 
 function parseMenuData(menuData: MenuRequest[0]) {
   return {
@@ -372,71 +338,64 @@ function parseMenuData(menuData: MenuRequest[0]) {
     hotkey: JSON.parse(menuData.hotkey),
   };
 }
-registerCallHandler<MenuRequest, void>(
-  "winhelper.popupMenu",
-  async (event, data, id) => {
-    const wnd = BrowserWindow.fromWebContents(event.sender);
-    if (!wnd) return;
-    const managed = ManagedWindow.fromBrowserWindow(wnd);
-    if (!managed) return;
-    const parsedMenuData = parseMenuData(data);
-    const platform = os.platform();
-    const injectShowMainWindowMenuItem =
-      platform === "linux" &&
-      (await settings.kv.get("tray.clickBehavior")) === "always-show-menu";
-    for (let i = 0; i < parsedMenuData.content.length; i++) {
-      const item = parsedMenuData.content[i];
-      // Inject "Manage Open Orpheus" menu item after "Settings" menu item
-      if (
-        platform !== "linux" &&
-        item.image_path &&
-        item.image_path.indexOf("menu/setting.svg") !== -1
-      ) {
-        parsedMenuData.content.splice(i + 1, 0, {
-          menu: true,
-          separator: false,
-          enable: true,
-          children: null,
-          image_color: "#00000000",
-          menu_id: "openOrpheus.manage",
-          text: "管理 Open Orpheus",
-        });
-        i++; // Skip the injected menu item
-      }
-      // Inject show main window menu item if tray.clickBehavior is "always-show-menu"
-      if (injectShowMainWindowMenuItem && item.menu_id === "exitApp") {
-        parsedMenuData.content.splice(i, 0, {
-          menu: true,
-          separator: false,
-          enable: true,
-          children: null,
-          image_color: "#00000000",
-          menu_id: "openOrpheus.showMainWindow",
-          text: "显示主窗口",
-        });
-        i++; // Skip the injected menu item
-      }
+registerCallHandler<MenuRequest, void>("winhelper.popupMenu", async (event, data, id) => {
+  const wnd = BrowserWindow.fromWebContents(event.sender);
+  if (!wnd) return;
+  const managed = ManagedWindow.fromBrowserWindow(wnd);
+  if (!managed) return;
+  const parsedMenuData = parseMenuData(data);
+  const platform = os.platform();
+  const injectShowMainWindowMenuItem =
+    platform === "linux" && (await settings.kv.get("tray.clickBehavior")) === "always-show-menu";
+  for (let i = 0; i < parsedMenuData.content.length; i++) {
+    const item = parsedMenuData.content[i];
+    // Inject "Manage Open Orpheus" menu item after "Settings" menu item
+    if (
+      platform !== "linux" &&
+      item.image_path &&
+      item.image_path.indexOf("menu/setting.svg") !== -1
+    ) {
+      parsedMenuData.content.splice(i + 1, 0, {
+        menu: true,
+        separator: false,
+        enable: true,
+        children: null,
+        image_color: "#00000000",
+        menu_id: "openOrpheus.manage",
+        text: "管理 Open Orpheus",
+      });
+      i++; // Skip the injected menu item
     }
-    const onClick = (itemId: string | null) => {
-      if (itemId === "openOrpheus.manage") {
-        showManageWindow();
-        return;
-      } else if (itemId === "openOrpheus.showMainWindow") {
-        event.sender.send("channel.call", "trayicon.onclick");
-        return;
-      }
-      event.sender.send("channel.call", "winhelper.onmenuclick", itemId, id);
-    };
-    const menu = new AppMenu(parsedMenuData.content);
-    managed.setData("menu", menu);
-    menu.setClickHandler(onClick);
-    menu.show();
+    // Inject show main window menu item if tray.clickBehavior is "always-show-menu"
+    if (injectShowMainWindowMenuItem && item.menu_id === "exitApp") {
+      parsedMenuData.content.splice(i, 0, {
+        menu: true,
+        separator: false,
+        enable: true,
+        children: null,
+        image_color: "#00000000",
+        menu_id: "openOrpheus.showMainWindow",
+        text: "显示主窗口",
+      });
+      i++; // Skip the injected menu item
+    }
   }
-);
+  const onClick = (itemId: string | null) => {
+    if (itemId === "openOrpheus.manage") {
+      showManageWindow();
+      return;
+    } else if (itemId === "openOrpheus.showMainWindow") {
+      event.sender.send("channel.call", "trayicon.onclick");
+      return;
+    }
+    event.sender.send("channel.call", "winhelper.onmenuclick", itemId, id);
+  };
+  const menu = new AppMenu(parsedMenuData.content);
+  managed.setData("menu", menu);
+  menu.setClickHandler(onClick);
+  void menu.show();
+});
 
-registerCallHandler<[string], void>(
-  "winhelper.setClipBoardData",
-  (event, data) => {
-    clipboard.writeText(data);
-  }
-);
+registerCallHandler<[string], void>("winhelper.setClipBoardData", (event, data) => {
+  void clipboard.writeText(data);
+});

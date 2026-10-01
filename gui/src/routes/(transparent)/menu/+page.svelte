@@ -172,17 +172,11 @@
           const subRect = submenuEl.getBoundingClientRect();
           const vw = window.innerWidth;
           const vh = window.innerHeight;
-          if (submenuX + subRect.width > vw)
-            submenuX = rect.left - subRect.width;
+          if (submenuX + subRect.width > vw) submenuX = rect.left - subRect.width;
           if (submenuY + subRect.height > vh) submenuY = vh - subRect.height;
         });
       } else if (!isSubmenuMode && submenuParentIndex !== index) {
-        api.openSubmenu(
-          $state.snapshot(item.children),
-          rawTemplates,
-          rect.right,
-          rect.top
-        );
+        api.openSubmenu($state.snapshot(item.children), rawTemplates, rect.right, rect.top);
         submenuParentIndex = index;
       }
     } else {
@@ -195,8 +189,7 @@
   }
 
   function handleItemLeave(index: number) {
-    if (hoveredIndex === index && submenuParentIndex !== index)
-      hoveredIndex = -1;
+    if (hoveredIndex === index && submenuParentIndex !== index) hoveredIndex = -1;
   }
 
   function handleSubmenuItemClick(item: MenuItem) {
@@ -236,9 +229,7 @@
         onitemleave={handleItemLeave}
         onbtnclick={handleBtnClick}
         bind:el={menuEl}
-        style="left: {cursorX}px; top: {menuTop}px; visibility: {menuReady
-          ? 'visible'
-          : 'hidden'};"
+        style="left: {cursorX}px; top: {menuTop}px; visibility: {menuReady ? 'visible' : 'hidden'};"
         class="shadow-[0_4px_16px_rgba(0,0,0,0.15),0_1px_4px_rgba(0,0,0,0.1)]"
         {@attach inputRegionAttachment}
       />

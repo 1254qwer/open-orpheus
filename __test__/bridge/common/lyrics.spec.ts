@@ -7,10 +7,7 @@ const hoisted = vi.hoisted(() => ({
   /** Values reported by the dispatcher getters. */
   state: {} as Record<string, unknown>,
   /** Listeners registered by the bridge, keyed by event name. */
-  listeners: new Map<
-    string,
-    (event: { name: string; data: unknown }) => void
-  >(),
+  listeners: new Map<string, (event: { name: string; data: unknown }) => void>(),
   /** Unsubscribe functions handed back by `on`. */
   unlisteners: new Map<string, ReturnType<typeof vi.fn>>(),
 }));
@@ -111,9 +108,7 @@ describe("registerLyricsHandlers", () => {
     const win = createFakeWindow();
     registerLyricsHandlers(win.wnd);
 
-    expect([...hoisted.listeners.keys()]).toEqual(
-      FORWARDING.map(([event]) => event)
-    );
+    expect([...hoisted.listeners.keys()]).toEqual(FORWARDING.map(([event]) => event));
 
     for (const [event, channel] of FORWARDING) {
       hoisted.listeners.get(event)?.({ name: event, data: `${event}-data` });

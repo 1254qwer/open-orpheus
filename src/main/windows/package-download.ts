@@ -14,7 +14,7 @@ const packageDownloadWindowOptions = {
   frame: true,
   webPreferences: {
     partition: "open-orpheus",
-    preload: path.join(import.meta.dirname, "package-download.js"),
+    preload: path.join(import.meta.dirname, "package-download.cjs"),
   },
 } satisfies BrowserWindowConstructorOptions;
 
@@ -39,9 +39,7 @@ class PackageDownloadWindow extends ManagedWindow {
   show(): Promise<void> {
     const wnd = this.window;
     if (!wnd) {
-      return Promise.reject(
-        new Error("Package download window was not created")
-      );
+      return Promise.reject(new Error("Package download window was not created"));
     }
 
     return new Promise<void>((resolve, reject) => {

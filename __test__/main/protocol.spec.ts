@@ -24,13 +24,9 @@ import registerAsProtocolClient, {
 describe("registerAsProtocolClient", () => {
   beforeEach(() => {
     vi.mocked(app.isDefaultProtocolClient).mockReset().mockReturnValue(false);
-    vi.mocked(app.getApplicationNameForProtocol)
-      .mockReset()
-      .mockReturnValue("");
+    vi.mocked(app.getApplicationNameForProtocol).mockReset().mockReturnValue("");
     vi.mocked(app.setAsDefaultProtocolClient).mockReset().mockReturnValue(true);
-    vi.mocked(app.removeAsDefaultProtocolClient)
-      .mockReset()
-      .mockReturnValue(true);
+    vi.mocked(app.removeAsDefaultProtocolClient).mockReset().mockReturnValue(true);
   });
 
   it("does nothing when the app already owns the scheme", () => {
@@ -42,9 +38,7 @@ describe("registerAsProtocolClient", () => {
   });
 
   it("does nothing when another application owns the scheme", () => {
-    vi.mocked(app.getApplicationNameForProtocol).mockReturnValue(
-      "Some Other App"
-    );
+    vi.mocked(app.getApplicationNameForProtocol).mockReturnValue("Some Other App");
 
     expect(registerAsProtocolClient()).toBe(false);
     expect(app.setAsDefaultProtocolClient).not.toHaveBeenCalled();
@@ -56,9 +50,7 @@ describe("registerAsProtocolClient", () => {
   });
 
   it("overrides another owner when forced", () => {
-    vi.mocked(app.getApplicationNameForProtocol).mockReturnValue(
-      "Some Other App"
-    );
+    vi.mocked(app.getApplicationNameForProtocol).mockReturnValue("Some Other App");
 
     expect(registerAsProtocolClient(true)).toBe(true);
     expect(app.setAsDefaultProtocolClient).toHaveBeenCalledWith("orpheus");
@@ -68,18 +60,14 @@ describe("registerAsProtocolClient", () => {
     vi.mocked(app.getApplicationNameForProtocol).mockReturnValue("Firefox");
 
     expect(getProtocolClientName()).toBe("Firefox");
-    expect(app.getApplicationNameForProtocol).toHaveBeenCalledWith(
-      "orpheus://"
-    );
+    expect(app.getApplicationNameForProtocol).toHaveBeenCalledWith("orpheus://");
   });
 });
 
 describe("unregisterAsProtocolClient", () => {
   beforeEach(() => {
     vi.mocked(app.isDefaultProtocolClient).mockReset().mockReturnValue(false);
-    vi.mocked(app.removeAsDefaultProtocolClient)
-      .mockReset()
-      .mockReturnValue(true);
+    vi.mocked(app.removeAsDefaultProtocolClient).mockReset().mockReturnValue(true);
   });
 
   it("does nothing when the app is not the default client", () => {

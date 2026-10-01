@@ -6,9 +6,7 @@ import { DbusClient, MediaSession } from "../index.js";
  * The client can only be exercised against a session bus, so these tests skip
  * on machines that have none (they are not part of the main vitest run).
  */
-const serial = process.env.DBUS_SESSION_BUS_ADDRESS
-  ? test.serial
-  : test.serial.skip;
+const serial = process.env.DBUS_SESSION_BUS_ADDRESS ? test.serial : test.serial.skip;
 
 /** The bus itself implements a handful of well-known methods and properties. */
 const BUS = {
@@ -53,14 +51,10 @@ test.after.always(async () => {
 });
 
 /** Wait until `predicate` holds, failing if it never does. */
-async function waitFor(
-  predicate: () => boolean,
-  timeoutMs = 5_000
-): Promise<void> {
+async function waitFor(predicate: () => boolean, timeoutMs = 5_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (!predicate()) {
-    if (Date.now() > deadline)
-      throw new Error("timed out waiting for a signal");
+    if (Date.now() > deadline) throw new Error("timed out waiting for a signal");
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
 }
@@ -115,10 +109,7 @@ serial("unwraps variants in dictionaries", async (t) => {
   });
   t.is(credentials.signature, "a{sv}");
 
-  const dict = credentials.body[0] as Record<
-    string,
-    { signature: string; value: unknown }
-  >;
+  const dict = credentials.body[0] as Record<string, { signature: string; value: unknown }>;
   t.is(dict.ProcessID.signature, "u");
   t.is(typeof dict.ProcessID.value, "number");
   // Where the bus reports an fd handle (`ProcessFD`), it cannot cross the
@@ -143,20 +134,14 @@ serial("reads and writes properties", async (t) => {
       value: [],
     })
   );
-  t.regex(
-    (error as Error).message,
-    /org\.freedesktop\.DBus\.Error\.PropertyReadOnly/
-  );
+  t.regex((error as Error).message, /org\.freedesktop\.DBus\.Error\.PropertyReadOnly/);
 });
 
 serial("rejects invalid calls", async (t) => {
   const client = newClient();
 
   const unknown = await t.throwsAsync(client.call({ ...BUS, method: "Nope" }));
-  t.regex(
-    (unknown as Error).message,
-    /org\.freedesktop\.DBus\.Error\.UnknownMethod/
-  );
+  t.regex((unknown as Error).message, /org\.freedesktop\.DBus\.Error\.UnknownMethod/);
 
   const signature = await t.throwsAsync(
     client.call({ ...BUS, method: "NameHasOwner", signature: "z", body: ["x"] })
@@ -177,9 +162,7 @@ serial("rejects invalid calls", async (t) => {
 serial("rejects a subscription with an invalid match", async (t) => {
   const client = newClient();
 
-  const error = await t.throwsAsync(
-    client.subscribe({ sender: "not a bus name" }, () => {})
-  );
+  const error = await t.throwsAsync(client.subscribe({ sender: "not a bus name" }, () => {}));
   t.regex((error as Error).message, /invalid signal sender/);
 });
 

@@ -59,9 +59,8 @@ export const events = new Emittery<LifecycleEvents>();
 export let state = LifecycleState.Starting;
 
 type StateEventData = {
-  [
-    K in keyof typeof STATE_EVENT_MAP
-  ]: LifecycleEvents[(typeof STATE_EVENT_MAP)[K] & keyof LifecycleEvents];
+  [K in keyof typeof STATE_EVENT_MAP]: LifecycleEvents[(typeof STATE_EVENT_MAP)[K] &
+    keyof LifecycleEvents];
 };
 
 export function setLifecycleState<K extends LifecycleState>(
@@ -76,10 +75,7 @@ export function setLifecycleState<K extends LifecycleState>(
   const event = STATE_EVENT_MAP[lifecycleState as keyof typeof STATE_EVENT_MAP];
   if (!event) return;
   events
-    .emit(
-      event as keyof LifecycleEvents,
-      args[0] as LifecycleEvents[keyof LifecycleEvents]
-    )
+    .emit(event as keyof LifecycleEvents, args[0] as LifecycleEvents[keyof LifecycleEvents])
     .catch((e) => {
       LOGGER.error({ err: toError(e) }, `Lifecycle event emit error`);
     });
@@ -246,24 +242,15 @@ async function runShutdownTasks(): Promise<void> {
       if (outcome === "done") continue;
 
       if (deadline.aborted) {
-        LOGGER.warn(
-          { task: task.name },
-          `Shutdown task cut off by the shutdown deadline`
-        );
+        LOGGER.warn({ task: task.name }, `Shutdown task cut off by the shutdown deadline`);
         logSkipped(queue.slice(index + 1));
         break;
       }
 
-      LOGGER.warn(
-        { task: task.name, timeoutMs: budget },
-        `Shutdown task timed out`
-      );
+      LOGGER.warn({ task: task.name, timeoutMs: budget }, `Shutdown task timed out`);
     } catch (e) {
       // One failing task must not skip the rest of the cleanup.
-      LOGGER.error(
-        { err: toError(e), task: task.name },
-        `Shutdown task failed`
-      );
+      LOGGER.error({ err: toError(e), task: task.name }, `Shutdown task failed`);
     }
   }
 
@@ -293,17 +280,11 @@ async function runShutdownFinalizers(): Promise<void> {
       ]);
 
       if (outcome === "expired") {
-        LOGGER.warn(
-          { finalizer: finalizer.name },
-          `Shutdown finalizer timed out`
-        );
+        LOGGER.warn({ finalizer: finalizer.name }, `Shutdown finalizer timed out`);
       }
     } catch (e) {
       // One failing finalizer must not stop the rest.
-      LOGGER.error(
-        { err: toError(e), finalizer: finalizer.name },
-        `Shutdown finalizer failed`
-      );
+      LOGGER.error({ err: toError(e), finalizer: finalizer.name }, `Shutdown finalizer failed`);
     }
   }
 }

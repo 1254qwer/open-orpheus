@@ -4,11 +4,7 @@ import { app } from "electron";
 import { fileExists, isMusicFile } from "./util";
 
 export async function raceArgument<T>(
-  predicate: (
-    arg: string,
-    index: number,
-    array: string[]
-  ) => Promise<T | null> | T | null,
+  predicate: (arg: string, index: number, array: string[]) => Promise<T | null> | T | null,
   argv?: string[]
 ): Promise<T | null> {
   const args = argv ?? process.argv.slice(app?.isPackaged ? 1 : 2);
@@ -27,11 +23,7 @@ export async function raceArgument<T>(
   }
 }
 
-export function parseMoveRun(
-  arg: string,
-  index: number,
-  array: string[]
-): [string, string] | null {
+export function parseMoveRun(arg: string, index: number, array: string[]): [string, string] | null {
   return arg === "--moverun" && array.length > index + 2
     ? // [src, dest]
       [array[index + 1], array[index + 2]]

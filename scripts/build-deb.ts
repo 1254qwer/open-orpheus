@@ -7,9 +7,7 @@ import { resolvePrebuiltAppDir } from "../packaging/common/prebuilt.ts";
 const projectRoot = resolve(import.meta.dirname, "..");
 const flags = parseFlags(process.argv.slice(2));
 
-const { deb: debOptions } = await import(
-  new URL("../packaging/options.ts", import.meta.url).href
-);
+const { deb: debOptions } = await import(new URL("../packaging/options.ts", import.meta.url).href);
 const prebuilt = flags.prebuilt
   ? await resolvePrebuiltAppDir(projectRoot, debOptions.name, flags.arch)
   : undefined;

@@ -163,7 +163,7 @@ Issue 是反馈 Bug、提出功能建议或讨论项目方向的主要渠道。�
 
 ### 代码风格
 
-- TypeScript / JavaScript：项目使用 ESLint，提交前请确保没有 lint 错误（`pnpm lint`），并且确保代码已格式化（`pnpm format`）。
+- TypeScript / JavaScript：主体代码由 [Oxlint](https://oxc.rs) 检查、[Oxfmt](https://oxc.rs) 格式化（配置见 `.oxlintrc.json`、`.oxfmtrc.json`），`gui/` 下的 SvelteKit 代码由 ESLint 检查（配置见 `gui/eslint.config.js`）。提交前请确保没有 lint 错误（`pnpm lint`），并且确保代码已格式化（`pnpm format`）。
 - Rust：遵循标准 `rustfmt` 风格（`cargo fmt`）。
 - 提交信息格式建议参考 [Conventional Commits](https://www.conventionalcommits.org/)。
 

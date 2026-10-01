@@ -63,16 +63,12 @@ describe("registerInputRegionHandlers", () => {
     const win = createFakeWindow();
     registerInputRegionHandlers(win.wnd);
 
-    await expect(
-      win.invoke("inputRegion.setInputRegions", regions)
-    ).resolves.toBe(true);
+    await expect(win.invoke("inputRegion.setInputRegions", regions)).resolves.toBe(true);
     expect(hoisted.managed.setWindowInputRegion).toHaveBeenCalledWith(regions);
 
     // A refusal from the native side is passed on unchanged.
     hoisted.managed.setWindowInputRegion.mockResolvedValue(false);
-    await expect(
-      win.invoke("inputRegion.setInputRegions", regions)
-    ).resolves.toBe(false);
+    await expect(win.invoke("inputRegion.setInputRegions", regions)).resolves.toBe(false);
   });
 
   it("reports failure when the window is not managed", async () => {
@@ -80,18 +76,14 @@ describe("registerInputRegionHandlers", () => {
     const win = createFakeWindow();
     registerInputRegionHandlers(win.wnd);
 
-    await expect(
-      win.invoke("inputRegion.setInputRegions", regions)
-    ).resolves.toBe(false);
+    await expect(win.invoke("inputRegion.setInputRegions", regions)).resolves.toBe(false);
   });
 
   it("ignores calls from a destroyed window", async () => {
     const win = createFakeWindow({ destroyed: true });
     registerInputRegionHandlers(win.wnd);
 
-    await expect(
-      win.invoke("inputRegion.setInputRegions", regions)
-    ).resolves.toBe(false);
+    await expect(win.invoke("inputRegion.setInputRegions", regions)).resolves.toBe(false);
     expect(hoisted.fromBrowserWindow).not.toHaveBeenCalled();
   });
 
@@ -100,9 +92,7 @@ describe("registerInputRegionHandlers", () => {
     const win = createFakeWindow();
     registerInputRegionHandlers(win.wnd);
 
-    await expect(
-      win.invoke("inputRegion.setInputRegions", regions)
-    ).resolves.toBe(true);
+    await expect(win.invoke("inputRegion.setInputRegions", regions)).resolves.toBe(true);
     expect(win.setIgnoreMouseEvents).toHaveBeenCalledWith(true, {
       forward: true,
     });
@@ -113,9 +103,7 @@ describe("registerInputRegionHandlers", () => {
     const win = createFakeWindow();
     registerInputRegionHandlers(win.wnd);
 
-    await expect(win.invoke("inputRegion.setInputRegions", [])).resolves.toBe(
-      true
-    );
+    await expect(win.invoke("inputRegion.setInputRegions", [])).resolves.toBe(true);
     expect(win.setIgnoreMouseEvents).toHaveBeenCalledWith(false);
   });
 });

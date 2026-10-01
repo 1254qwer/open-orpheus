@@ -2,14 +2,8 @@ import { resolve } from "node:path";
 
 import { app } from "electron";
 
-export const downloadTemp = resolve(
-  app.getPath("temp"),
-  "open-orpheus-download-temp"
-);
-export const streamerTemp = resolve(
-  app.getPath("temp"),
-  "open-orpheus-streamer-temp"
-);
+export const downloadTemp = resolve(app.getPath("temp"), "open-orpheus-download-temp");
+export const streamerTemp = resolve(app.getPath("temp"), "open-orpheus-streamer-temp");
 
 export const data = resolve(app.isPackaged ? app.getPath("userData") : "data");
 
@@ -21,10 +15,7 @@ export const wasm = resolve(data, "wasm");
 export const aegisPublicKey = resolve(data, "Aegis", "pubkey");
 
 // Flag files
-export const disableHardwareAccelerationFlag = resolve(
-  data,
-  "disable-hw-accel"
-);
+export const disableHardwareAccelerationFlag = resolve(data, "disable-hw-accel");
 
 // Simple data files
 export const lastWebpackHash = resolve(data, "last-webpack-hash");

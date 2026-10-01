@@ -11,9 +11,7 @@ export enum WorkaroundFlags {
   OverlayNoMaximize = 1 << 1,
 }
 
-const de = process.env.XDG_CURRENT_DESKTOP
-  ? process.env.XDG_CURRENT_DESKTOP.split(":")
-  : [];
+const de = process.env.XDG_CURRENT_DESKTOP ? process.env.XDG_CURRENT_DESKTOP.split(":") : [];
 
 // Only KDE allows fullscreen transparent windows, see https://gitlab.freedesktop.org/wayland/wayland-protocols/-/issues/116
 if (
