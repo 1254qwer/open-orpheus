@@ -239,7 +239,7 @@
   <main class="h-screen flex-1 overflow-y-auto">
     <div class="w-full p-4 xl:mx-auto xl:w-4xl">
       {#each shownItems as item, i (item.id)}
-        <div class="my-4" class:mt-0={i === 0} id={item.id}>
+        <div class="my-4 scroll-mt-4" class:mt-0={i === 0} id={item.id}>
           <item.component />
         </div>
         {#if i < items.length - 1}
