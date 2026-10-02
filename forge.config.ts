@@ -17,8 +17,22 @@ import MakerRpm from "./plugins/MakerRpm";
 
 const LOCALES = ["en", "en-US", "zh-CN"];
 
+let icon;
+switch (process.platform) {
+  case "win32":
+    icon = "assets/icon_256";
+    break;
+  case "darwin":
+    icon = ["assets/icon.icns", "assets/icon.icon"];
+    break;
+  default:
+    icon = undefined;
+    break;
+}
+
 const config: ForgeConfig = {
   packagerConfig: {
+    icon,
     asar: {
       unpack: "**/*.{so*,dylib,dll}",
     },

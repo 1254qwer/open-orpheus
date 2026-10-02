@@ -7,6 +7,7 @@ export const squirrel: MakerSquirrelConfig = {
   title: "Open Orpheus",
   description: "An open-source Netease Cloud Music client",
   authors: "YUCLing",
+  setupIcon: "assets/icon_256.ico",
 };
 
 export const rpm: MakerRpmOptions = {
