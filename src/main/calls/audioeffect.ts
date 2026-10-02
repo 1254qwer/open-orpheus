@@ -22,3 +22,39 @@ registerCallHandler<
     return [{ errorCode: 2, errorMsg: err.message }];
   }
 });
+
+type ModelParam = {
+  name: string;
+  dtype: string;
+  shape: unknown[];
+};
+type ModelInput = ModelParam & {
+  data: unknown[];
+};
+registerCallHandler<
+  [
+    {
+      modelId: string;
+      inputs: ModelInput[];
+      outputNames: string[];
+      signature: {
+        modelId: string;
+        inputs: ModelInput[];
+        outputs: ModelParam[];
+      };
+    },
+  ],
+  [
+    {
+      errorCode: number;
+      errorMsg: string;
+    },
+  ]
+>("audioeffect.predictEmoFX", () => {
+  return [
+    {
+      errorCode: -111,
+      errorMsg: "model not loaded",
+    },
+  ];
+});
