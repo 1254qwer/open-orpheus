@@ -201,14 +201,6 @@ jobs:
           chmod +x "$HOME/.local/bin/flatpak-cargo-generator"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Set up Flatpak runtimes
-        run: |
-          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y flathub \
-            org.freedesktop.Platform//26.08 \
-            org.freedesktop.Sdk//26.08 \
-            org.freedesktop.Sdk.Extension.node24//26.08
-
       - name: Generate Flatpak builder manifest
         run: node scripts/build-flatpak-builder.ts
 
@@ -232,6 +224,14 @@ jobs:
             "$LINTER_IMAGE" \
             --gha-format --exceptions --exceptions-repo stable \
             manifest io.github.yucling.open-orpheus.yaml
+
+      - name: Set up Flatpak runtimes
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub \
+            org.freedesktop.Platform//26.08 \
+            org.freedesktop.Sdk//26.08 \
+            org.freedesktop.Sdk.Extension.node24//26.08
 
       - name: Build the Flatpak
         working-directory: out/make/flatpak-builder

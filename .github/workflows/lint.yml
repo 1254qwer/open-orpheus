@@ -38,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check formatting
+        run: pnpm format:check
+
       - name: Build native modules
         shell: bash
         run: SKIP_IF_NO_SCRIPT=1 PREFER_SCRIPT=types pnpm build:modules
@@ -50,9 +53,6 @@ jobs:
 
       - name: Run Svelte check
         run: pnpm lint:gui:check
-
-      - name: Check formatting
-        run: pnpm format:check
 
   lint-rust:
     name: Clippy & Rustfmt (${{ matrix.os }})
