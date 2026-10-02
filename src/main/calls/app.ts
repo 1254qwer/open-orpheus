@@ -584,3 +584,8 @@ registerCallHandler<[string], [boolean]>("app.cancelAutoRun", (event, appName) =
       return [false];
   }
 });
+
+registerCallHandler<[{ enabled: boolean; height: number }], void>(
+  "app.setCefNativeTransparentMinibarBackdropEnabled",
+  () => {}
+);
