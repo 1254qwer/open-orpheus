@@ -237,10 +237,21 @@ const transport: pino.TransportSingleOptions[] = [
   },
 ];
 
-if (process.stdout.isTTY)
+if (
+  process.stdout.isTTY ||
+  process.env.OPEN_ORPHEUS_FORCE_PRETTY === "1" ||
+  process.env.OPEN_ORPHEUS_FORCE_PRETTY?.toLowerCase() === "true"
+)
   transport.push({
     target: "pino-pretty",
     options: {},
+  });
+else
+  transport.push({
+    target: "pino/file",
+    options: {
+      destination: 1,
+    },
   });
 
 const stream = pino.transport({
