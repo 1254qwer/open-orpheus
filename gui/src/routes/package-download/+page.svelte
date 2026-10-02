@@ -58,7 +58,7 @@
       Icon = FileClock;
       title = "包文件有变更";
       description =
-        "该版本 Open Orpheus 已切换到另一个版本的包文件。是否自动下载并覆盖？关闭本窗口可忽略此次更新";
+        "该版本 Open Orpheus 已切换到另一个版本的包文件。是否自动下载并覆盖？关闭本窗口可忽略此次更新（可在管理 Open Orpheus 界面手动重新下载资源包）";
       break;
   }
 
@@ -82,7 +82,7 @@
     <div class="grid grid-cols-[auto_1fr] grid-rows-2 gap-2">
       <Icon class="row-span-2 mr-4 h-16 w-16 self-center" />
       <h1 class="self-end text-2xl font-bold">{title}</h1>
-      <p class="text-gray-600">{description}</p>
+      <p class="max-w-96 text-gray-600">{description}</p>
     </div>
     <div class="text-center">
       <Button onclick={startDownload} size="lg" class="cursor-pointer px-8">下载</Button>
