@@ -10,7 +10,7 @@ export const player = new Player();
 
 void ipcRenderer.invoke("audio.getDevice").then((deviceId) => {
   if (deviceId && typeof deviceId === "string") {
-    (player.audioContext as unknown as HTMLAudioElement).setSinkId(deviceId).catch((e) => {
+    player.setSinkId(deviceId).catch((e) => {
       LOGGER.error({ err: toError(e) }, `Failed to set audio output device`);
     });
   }
