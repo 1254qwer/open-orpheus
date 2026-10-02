@@ -153,7 +153,7 @@ registerCallHandler<[string, { device: AudioDeviceInit; type: string }], void>(
     if (kind === "device") {
       await Promise.allSettled([
         ipcRenderer.invoke("audio.setDevice", device.deviceId),
-        (player.audioContext as unknown as HTMLAudioElement).setSinkId(device.deviceId),
+        player.setSinkId(device.deviceId),
       ]);
     }
   }
