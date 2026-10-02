@@ -1,3 +1,6 @@
+* Fri Oct 2 2026 YUCLing <luotianyi@luotianyi.me> - 0.19.1-1
+- Corrected the commit hash of the resource pack.
+
 * Fri Oct 2 2026 YUCLing <luotianyi@luotianyi.me> - 0.19.0-1
 - Added support for the xeapi algorithm.
 - Added support for scheduled automatic shutdown.
